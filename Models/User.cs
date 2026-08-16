@@ -2,7 +2,7 @@ namespace Absensi.Models
 {
     public class User
     {
-        public int Id { get; set; }
+        public int id { get; set; }
         public string Nama { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty; // hashed, jangan plain text
 
