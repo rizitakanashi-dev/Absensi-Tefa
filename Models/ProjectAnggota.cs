@@ -6,8 +6,8 @@ namespace absensi.models
     public int iduser {get; set;}
     public int idproject {get; set;}
 
-    public string username {get; set;} = string.empty;
-    public string project {get; set;} = string.empty;
+    public string username {get; set;} = string.Empty;
+    public string project {get; set;} = string.Empty;
   }
 
   public class projectanggotaotd

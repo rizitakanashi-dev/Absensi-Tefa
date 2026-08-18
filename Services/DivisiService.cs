@@ -15,5 +15,24 @@ namespace Absensi.Services
         var result = await conn.QueryAsync<DivisiDTO>(sql);
         return result.ToList();
     }
+
+    public async Task<int> Create(DivisiDTO divisi){
+      using var conn = db.connect();
+      string sql = @"
+        INSERT INTO divisi(nama) VALUES(@nama);";
+      return await conn.ExecuteAsync(sql, divisi);
+    }
+
+    public async Task<int> Update(DivisiDTO divisi){
+      using var conn = db.connect();
+      string sql = @"UPDATE divisi SET nama = @nama WHERE id = @id;";
+      return await conn.ExecuteAsync(sql, divisi);
+    }
+
+    public async Task<int> Delete(int id){
+      using var conn = db.connect();
+      string sql = @"DELETE FROM divisi WHERE id = @id;";
+      return await conn.ExecuteAsync(sql, new { id });
+    }
   }
 }

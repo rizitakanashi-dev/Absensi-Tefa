@@ -18,7 +18,7 @@ namespace Absensi.Services
             var claims = new[]
             {
         // Maps to User.Id
-        new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+        new Claim(JwtRegisteredClaimNames.Sub, user.id.ToString()),
         
         // Maps to User.Nama_Lengkap
         new Claim(ClaimTypes.Name, user.Nama),
