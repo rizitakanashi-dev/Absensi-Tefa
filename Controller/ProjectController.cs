@@ -3,13 +3,13 @@ using Absensi.Models;
 
 namespace Absensi.Controller
 {
-    public static class DivisiController
+    public static class ProjectController
     {
-        public static void MapDivisi(this WebApplication app)
+        public static void MapProject(this WebApplication app)
         {
-            var g = app.MapGroup("/api/v1/divisi");
+            var g = app.MapGroup("/api/v1/project");
 
-            g.MapGet("/", async (DivisiService services) =>
+            g.MapGet("/", async (ProjectService services) =>
             {
                 try
                 {
@@ -22,12 +22,12 @@ namespace Absensi.Controller
                 }
             });
 
-            g.MapGet("/{id:int}", async (int id, DivisiService services) =>
+            g.MapGet("/{id:int}", async (int id, ProjectService services) =>
             {
                 try
                 {
                     var data = await services.GetById(id);
-                    if (data == null) return Results.NotFound("Divisi tidak ditemukan");
+                    if (data == null) return Results.NotFound("Project tidak ditemukan");
                     return Results.Ok(data);
                 }
                 catch (Exception e)
@@ -36,12 +36,12 @@ namespace Absensi.Controller
                 }
             });
 
-            g.MapPost("/", async (DivisiDTO dto, DivisiService services) =>
+            g.MapPost("/", async (ProjectDTO dto, ProjectService services) =>
             {
                 try
                 {
                     var rowsAffected = await services.Create(dto);
-                    return Results.Created($"/api/v1/divisi", dto);
+                    return Results.Created($"/api/v1/project", dto);
                 }
                 catch (Exception e)
                 {
@@ -49,13 +49,13 @@ namespace Absensi.Controller
                 }
             });
 
-            g.MapPut("/{id:int}", async (int id, DivisiDTO dto, DivisiService services) =>
+            g.MapPut("/{id:int}", async (int id, ProjectDTO dto, ProjectService services) =>
             {
                 try
                 {
                     dto.id = id;
                     var rowsAffected = await services.Update(dto);
-                    if (rowsAffected == 0) return Results.NotFound("Divisi tidak ditemukan");
+                    if (rowsAffected == 0) return Results.NotFound("Project tidak ditemukan");
                     return Results.Ok("data berhasil diperbarui");
                 }
                 catch (Exception e)
@@ -64,12 +64,12 @@ namespace Absensi.Controller
                 }
             });
 
-            g.MapDelete("/{id:int}", async (int id, DivisiService services) =>
+            g.MapDelete("/{id:int}", async (int id, ProjectService services) =>
             {
                 try
                 {
                     var rowsAffected = await services.Delete(id);
-                    if (rowsAffected == 0) return Results.NotFound("Divisi tidak ditemukan");
+                    if (rowsAffected == 0) return Results.NotFound("Project tidak ditemukan");
                     return Results.Ok("data berhasil di hapus");
                 }
                 catch (Exception e)

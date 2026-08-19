@@ -11,6 +11,7 @@ builder.Services.AddSingleton<Database>();
 
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<RoleServices>();
+builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<StatusService>();
 builder.Services.AddScoped<AuthServices>();
 builder.Services.AddScoped<DivisiService>();
@@ -43,6 +44,7 @@ app.Use(async (context, next) =>
 });
 // Configure the HTTP request pipeline.
 app.MapDivisi();
+app.MapProject();
 app.MapRole();
 app.MapStatus();
 app.MapAuth();
