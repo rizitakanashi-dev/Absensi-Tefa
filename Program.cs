@@ -9,8 +9,9 @@ Env.Value = builder.Configuration;
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton<Database>();
 
-builder.Services.AddScoped<IPasswordService,PasswordService>();
+builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<RoleServices>();
+builder.Services.AddScoped<StatusService>();
 builder.Services.AddScoped<AuthServices>();
 builder.Services.AddScoped<DivisiService>();
 
@@ -41,8 +42,9 @@ app.Use(async (context, next) =>
     }
 });
 // Configure the HTTP request pipeline.
-app.MapRole();
 app.MapDivisi();
+app.MapRole();
+app.MapStatus();
 app.MapAuth();
 app.Run();
 
