@@ -2,6 +2,7 @@ using System.Text;
 using System.Diagnostics;
 using Absensi.Services;
 using Absensi.Controller;
+
 var builder = WebApplication.CreateBuilder(args);
 Env.Value = builder.Configuration;
 // Add services to the container.
@@ -9,12 +10,16 @@ Env.Value = builder.Configuration;
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton<Database>();
 
+builder.Services.AddControllers();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<RoleServices>();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<StatusService>();
 builder.Services.AddScoped<AuthServices>();
 builder.Services.AddScoped<DivisiService>();
+builder.Services.AddScoped<AnggotaService>();
+builder.Services.AddScoped<GuruService>();
+builder.Services.AddScoped<PMService>();
 
 var app = builder.Build();
 //Logger
@@ -48,6 +53,7 @@ app.MapProject();
 app.MapRole();
 app.MapStatus();
 app.MapAuth();
+app.MapControllers();
 app.Run();
 
-
+// Radot was here
