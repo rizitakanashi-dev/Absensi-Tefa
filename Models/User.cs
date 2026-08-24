@@ -14,6 +14,7 @@ namespace Absensi.Models
 
         public string Role { get; set; } = string.Empty;
         public string Divisi { get; set; } = string.Empty;
+        public DateTime? refreshTokenExpired {get; set;}
     }
     public class UserOTD
     {

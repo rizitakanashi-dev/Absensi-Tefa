@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Diagnostics;
 using Absensi.Services;
@@ -12,6 +14,7 @@ builder.Services.AddSingleton<Database>();
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<IJWTService, JWTService>();
 builder.Services.AddScoped<RoleServices>();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<StatusService>();
@@ -20,6 +23,27 @@ builder.Services.AddScoped<DivisiService>();
 builder.Services.AddScoped<AnggotaService>();
 builder.Services.AddScoped<GuruService>();
 builder.Services.AddScoped<PMService>();
+
+ // 1. Konfigurasi Authentication dengan Skema JwtBearer
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = false, // Sesuaikan dengan konfigurasi JWTService kamu
+        ValidateAudience = false,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "SUPER_SECRET_KEY_KAMU_MINIMAL_32_KARAKTER"))
+    };
+});
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 //Logger
@@ -47,7 +71,9 @@ app.Use(async (context, next) =>
         );
     }
 });
+app.UseAuthentication();
 // Configure the HTTP request pipeline.
+app.UseAuthorization();
 app.MapDivisi();
 app.MapProject();
 app.MapRole();
