@@ -19,7 +19,7 @@ namespace Absensi.Controller
                     var isRegistered = await services.IsRegistered();
                     if (isRegistered)
                     {
-                        return Results.BadRequest(new { message = "Registrasi admin ditutup karena admin sudah ada" });
+                       return Results.BadRequest(new { message = "Registrasi admin ditutup karena admin sudah ada" });
                     }
 
                     data.password = pServices.HashPassword(data.password);
