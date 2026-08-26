@@ -2,18 +2,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Diagnostics;
-using System.Data; // 1. Tambahkan ini untuk IDbConnection
+using System.Data;
 using Absensi.Services;
-using Absensi.Controller; // Pastikan namespace sesuai dengan controller-mu
+using Absensi.Controller;
 
 var builder = WebApplication.CreateBuilder(args);
 Env.Value = builder.Configuration;
 
-// Add services to the container.
+
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton<Database>();
 
-// 2. Tambahkan baris ini agar IDbConnection bisa di-resolve oleh Dapper/Service
 builder.Services.AddScoped<IDbConnection>(sp =>
     sp.GetRequiredService<Database>().connect());
 
@@ -29,6 +28,7 @@ builder.Services.AddScoped<AnggotaService>();
 builder.Services.AddScoped<GuruService>();
 builder.Services.AddScoped<PMService>();
 builder.Services.AddScoped<AbsensiService>();
+builder.Services.AddScoped<ProjectAnggotaService>();
 
 // Konfigurasi Authentication dengan Skema JwtBearer
 builder.Services.AddAuthentication(options =>
