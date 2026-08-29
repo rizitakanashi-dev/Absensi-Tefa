@@ -1,9 +1,9 @@
-using absensi.models;
-using absensi.Services;
+using Absensi.Models;
+using Absensi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Absensi.Controllers
+namespace Absensi.Controller
 {
     [ApiController]
     [Route("api/v1/project-anggota")]
@@ -27,7 +27,7 @@ namespace Absensi.Controllers
 
         // POST: api/v1/project-anggota
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] projectanggotadto req)
+        public async Task<IActionResult> Create([FromBody] ProjectAnggotaDto req)
         {
             var result = await _service.Create(req);
             if (!result)

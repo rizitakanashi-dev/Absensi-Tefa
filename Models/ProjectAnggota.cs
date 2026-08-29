@@ -1,24 +1,24 @@
-namespace absensi.models
+namespace Absensi.Models
 {
-  public class projectanggota
-  {
-    public int id {get; set;}
-    public int iduser {get; set;}
-    public int idproject {get; set;}
+    public class ProjectAnggota
+    {
+        public int Id { get; set; }
+        public int IdUser { get; set; }
+        public int IdProject { get; set; }
 
-    public string username {get; set;} = string.Empty;
-    public string project {get; set;} = string.Empty;
-  }
+        public string Username { get; set; } = string.Empty;
+        public string Project { get; set; } = string.Empty;
+    }
 
-  public class projectanggotaotd
-  {
-    public int id_user {get; set;}
-    public int id_project {get; set;}
-  }
+    public class ProjectAnggotaOtd
+    {
+        public int IdUser { get; set; }
+        public int IdProject { get; set; }
+    }
 
-  public class projectanggotadto
-  {
-    public int user {get; set;}
-    public int project {get; set;} 
-  }
+    public class ProjectAnggotaDto
+    {
+        public int User { get; set; }
+        public int Project { get; set; } 
+    }
 }
