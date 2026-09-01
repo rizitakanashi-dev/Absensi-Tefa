@@ -37,7 +37,7 @@ namespace Absensi.Models
       public string RefreshToken { get; set; } = string.Empty;
   }
 
-  public class Policies
+  public static class Policies
   {
     public const string Admin = "Admin";
     public const string ProjectManager = "Project Manager";

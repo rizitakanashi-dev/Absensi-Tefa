@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Data;
 using Absensi.Services;
 using Absensi.Controller;
+using Absensi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 Env.Value = builder.Configuration;
@@ -15,6 +16,8 @@ builder.Services.AddSingleton<Database>();
 
 builder.Services.AddScoped<IDbConnection>(sp =>
     sp.GetRequiredService<Database>().connect());
+
+builder.Services.AddAuthorization(Policies.Register);
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
@@ -49,9 +52,19 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddCors(options =>
+    {
+      options.AddPolicy("AllowFrontend", policy =>
+          {
+            policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+          });
+    });
 
 var app = builder.Build();
+
 
 // Logger Middleware
 app.Use(async (context, next) =>
@@ -79,6 +92,8 @@ app.Use(async (context, next) =>
     }
 });
 
+app.UseCors("AllowFrontend");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -91,4 +106,4 @@ app.MapControllers();
 app.MapAbsensiEndpoints();
 
 app.Run();
-// Radot was here
+// Rizi was here
