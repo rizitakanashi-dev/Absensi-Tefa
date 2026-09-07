@@ -19,7 +19,7 @@ namespace Absensi.Controller
                     var isRegistered = await services.IsRegistered();
                     if (isRegistered)
                     {
-                       return Results.BadRequest(new { message = "Registrasi admin ditutup karena admin sudah ada" });
+                        return Results.BadRequest(new { message = "Registrasi admin ditutup karena admin sudah ada" });
                     }
 
                     data.password = pServices.HashPassword(data.password);
@@ -29,9 +29,9 @@ namespace Absensi.Controller
                         ? Results.Ok(new { message = "Admin berhasil didaftarkan" }) 
                         : Results.BadRequest(new { message = "Gagal mendaftarkan admin" });
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    return Results.BadRequest(new { message = "Gagal memproses pendaftaran admin" });
+                    return Results.BadRequest(new { message = ex.Message });
                 }
             });
 
@@ -40,18 +40,41 @@ namespace Absensi.Controller
             {
                 try
                 {
+                    if (string.IsNullOrWhiteSpace(login.nama) || string.IsNullOrWhiteSpace(login.password))
+                    {
+                        return Results.BadRequest(new { message = "Nama dan password wajib diisi" });
+                    }
+
                     var user = await services.Login(login);
                     if (user == null)
                     {
                         return Results.Unauthorized();
                     }
 
-                    if (!pServices.VerifyPassword(login.password, user.Password))
+                    bool isPasswordValid = false;
+                    try
+                    {
+                        isPasswordValid = pServices.VerifyPassword(login.password, user.password);
+                    }
+                    catch
+                    {
+                        isPasswordValid = (login.password == user.password);
+                    }
+
+                    if (!isPasswordValid)
                     {
                         return Results.Unauthorized();
                     }
 
-                    var token = jwtServices.GenerateToken(user);
+                    // Gunakan PascalCase (Nama & Role) untuk model User
+                    var userForJwt = new User
+                    {
+                        id = user.id,
+                        Nama = user.nama,
+                        Role = user.role
+                    };
+
+                    var token = jwtServices.GenerateToken(userForJwt);
                     var refreshToken = jwtServices.GenerateRefreshToken();
 
                     await services.UpdateRefreshToken(refreshToken, DateTime.UtcNow.AddDays(20), user.id);
@@ -60,13 +83,13 @@ namespace Absensi.Controller
                     {
                         Token = token,
                         Refresh_Token = refreshToken,
-                        Nama = user.Nama,
-                        Role = user.Role
+                        Nama = user.nama,
+                        Role = user.role
                     });
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    return Results.BadRequest(new { message = "Gagal memproses login" });
+                    return Results.BadRequest(new { message = ex.Message });
                 }
             });
 
@@ -81,7 +104,15 @@ namespace Absensi.Controller
                         return Results.Unauthorized();
                     }
 
-                    var newToken = jwtService.GenerateToken(user);
+                    // Gunakan PascalCase (Nama & Role) untuk model User
+                    var userForJwt = new User
+                    {
+                        id = user.id,
+                        Nama = user.nama,
+                        Role = user.role
+                    };
+
+                    var newToken = jwtService.GenerateToken(userForJwt);
                     var newRefreshToken = jwtService.GenerateRefreshToken();
 
                     await services.UpdateRefreshToken(newRefreshToken, DateTime.UtcNow.AddDays(20), user.id);
@@ -90,13 +121,13 @@ namespace Absensi.Controller
                     {
                         Token = newToken,
                         Refresh_Token = newRefreshToken,
-                        Nama = user.Nama,
-                        Role = user.Role
+                        Nama = user.nama,
+                        Role = user.role
                     });
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    return Results.BadRequest(new { message = "Gagal memperbarui token" });
+                    return Results.BadRequest(new { message = ex.Message });
                 }
             });
 
@@ -120,9 +151,9 @@ namespace Absensi.Controller
 
                     return Results.Ok(user);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    return Results.BadRequest(new { message = "Gagal mengambil data profil" });
+                    return Results.BadRequest(new { message = ex.Message });
                 }
             }).RequireAuthorization();
         }

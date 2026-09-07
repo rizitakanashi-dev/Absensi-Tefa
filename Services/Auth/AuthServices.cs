@@ -20,7 +20,7 @@ namespace Absensi.Services
                 nama = data.nama,
                 password = data.password,
                 id_role = 1, // 1 = Admin
-                id_divisi = data.id_divisi // Diambil dari DTO (bisa null/diisi)
+                id_divisi = data.id_divisi
             });
 
             return result > 0;
@@ -34,16 +34,20 @@ namespace Absensi.Services
             return count > 0;
         }
 
-        // 3. LOGIN USER (AMBIL USER UNTUK DICOKKAN PASSWORD)
-        public async Task<User?> Login(Login data)
+        // 3. LOGIN USER (MAPPING KE UserSessionModel)
+        public async Task<UserSessionModel?> Login(Login data)
         {
             using var conn = db.connect();
-            string sql = @"SELECT u.id, u.nama, u.password, r.nama AS role
+            string sql = @"SELECT 
+                            u.id AS id, 
+                            u.nama AS nama, 
+                            u.password AS password, 
+                            r.nama AS role
                            FROM user u
                            JOIN role r ON r.id = u.id_role
                            WHERE u.nama = @nama;";
 
-            return await conn.QueryFirstOrDefaultAsync<User>(sql, new { nama = data.nama });
+            return await conn.QueryFirstOrDefaultAsync<UserSessionModel>(sql, new { nama = data.nama });
         }
 
         // 4. UPDATE REFRESH TOKEN DI DATABASE
@@ -59,22 +63,30 @@ namespace Absensi.Services
         }
 
         // 5. VALIDASI REFRESH TOKEN
-        public async Task<User?> RefreshTokenService(RefreshRequest req)
+        public async Task<UserSessionModel?> RefreshTokenService(RefreshRequest req)
         {
             using var conn = db.connect();
-            string sql = @"SELECT u.id, u.nama, r.nama AS role, u.refresh_token_expired AS refreshTokenExpired
+            string sql = @"SELECT 
+                            u.id AS id, 
+                            u.nama AS nama, 
+                            r.nama AS role, 
+                            u.refresh_token_expired AS refreshTokenExpired
                            FROM user u
                            JOIN role r ON r.id = u.id_role
                            WHERE u.refresh_token = @refreshToken;";
 
-            return await conn.QueryFirstOrDefaultAsync<User>(sql, new { refreshToken = req.RefreshToken });
+            return await conn.QueryFirstOrDefaultAsync<UserSessionModel>(sql, new { refreshToken = req.RefreshToken });
         }
 
         // 6. GET PROFIL USER UNTUK ENDPOINT /ME
         public async Task<UserDTO?> GetMe(int userId)
         {
             using var conn = db.connect();
-            string sql = @"SELECT u.id, u.nama, r.nama AS Role, d.nama AS Divisi
+            string sql = @"SELECT 
+                            u.id, 
+                            u.nama, 
+                            r.nama AS Role, 
+                            d.nama AS Divisi
                            FROM user u
                            JOIN role r ON r.id = u.id_role
                            LEFT JOIN divisi d ON d.id = u.id_divisi
