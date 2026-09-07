@@ -6,13 +6,12 @@ using System.Data;
 using Absensi.Services;
 using Absensi.Controller;
 using Absensi.Models;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
-Env.Value = builder.Configuration;
-
 
 builder.Services.AddOpenApi();
-builder.Services.AddSingleton<Database>();
+builder.Services.AddScoped<Database>();
 
 builder.Services.AddScoped<IDbConnection>(sp =>
     sp.GetRequiredService<Database>().connect());
@@ -33,7 +32,6 @@ builder.Services.AddScoped<PMService>();
 builder.Services.AddScoped<AbsensiService>();
 builder.Services.AddScoped<ProjectAnggotaService>();
 
-// Konfigurasi Authentication dengan Skema JwtBearer
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -48,25 +46,33 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "SUPER_SECRET_KEY_KAMU_MINIMAL_32_KARAKTER"))
+            Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"] ?? "SUPER_SECRET_KEY_KAMU_MINIMAL_32_KARAKTER"))
     };
 });
 
 builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
     {
-      options.AddPolicy("AllowFrontend", policy =>
-          {
-            policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
+        policy.SetIsOriginAllowed(_ => true)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
-          });
     });
+});
 
 var app = builder.Build();
 
+Env.Value = app.Configuration;
 
-// Logger Middleware
+app.UseCors("AllowFrontend");
+
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
 app.Use(async (context, next) =>
 {
     var sw = Stopwatch.StartNew();
@@ -92,8 +98,6 @@ app.Use(async (context, next) =>
     }
 });
 
-app.UseCors("AllowFrontend");
-
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -106,4 +110,3 @@ app.MapControllers();
 app.MapAbsensiEndpoints();
 
 app.Run();
-// Rizi was here

@@ -8,15 +8,20 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: absensi_db
+      MYSQL_DATABASE: absensi
       MYSQL_USER: absensi_user
       MYSQL_PASSWORD: absensipassword
     ports:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
-      # Eksekusi setup.sql otomatis saat database baru dibuat
       - ./setup.sql:/docker-entrypoint-initdb.d/setup.sql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -prootpassword || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
 
   # Backend .NET 8 API
   backend:
@@ -28,9 +33,12 @@ services:
     ports:
       - "5072:8080"
     environment:
-      - ConnectionStrings__DefaultConnection=Server=db;Database=absensi_db;Uid=absensi_user;Pwd=absensipassword;
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Port=3306;Database=absensi;Uid=absensi_user;Pwd=absensipassword;SslMode=Disabled;AllowPublicKeyRetrieval=True;
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   db_data:

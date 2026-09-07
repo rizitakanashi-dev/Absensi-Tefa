@@ -31,16 +31,17 @@ namespace Absensi.Controller
                 }
                 catch (Exception ex)
                 {
+                    Console.WriteLine($"[REGISTER ERROR]: {ex.Message}");
                     return Results.BadRequest(new { message = ex.Message });
                 }
             });
 
             // 2. LOGIN
-            g.MapPost("/login", async (AuthServices services, IPasswordService pServices, IJWTService jwtServices, [FromBody] Login login) =>
+            g.MapPost("/login", async (AuthServices services, IPasswordService pServices, IJWTService jwtServices, Login login) =>
             {
                 try
                 {
-                    if (string.IsNullOrWhiteSpace(login.nama) || string.IsNullOrWhiteSpace(login.password))
+                    if (login == null || string.IsNullOrWhiteSpace(login.nama) || string.IsNullOrWhiteSpace(login.password))
                     {
                         return Results.BadRequest(new { message = "Nama dan password wajib diisi" });
                     }
@@ -66,7 +67,6 @@ namespace Absensi.Controller
                         return Results.Unauthorized();
                     }
 
-                    // Gunakan PascalCase (Nama & Role) untuk model User
                     var userForJwt = new User
                     {
                         id = user.id,
@@ -89,12 +89,14 @@ namespace Absensi.Controller
                 }
                 catch (Exception ex)
                 {
-                    return Results.BadRequest(new { message = ex.Message });
+                    Console.WriteLine($"[LOGIN EXCEPTION]: {ex.Message}");
+                    Console.WriteLine($"[LOGIN STACK TRACE]: {ex.StackTrace}");
+                    return Results.BadRequest(new { message = ex.Message, detail = ex.StackTrace });
                 }
             });
 
             // 3. REFRESH TOKEN
-            g.MapPost("/refresh", async (AuthServices services, [FromBody] RefreshRequest req, IJWTService jwtService) =>
+            g.MapPost("/refresh", async (AuthServices services, RefreshRequest req, IJWTService jwtService) =>
             {
                 try
                 {
@@ -104,7 +106,6 @@ namespace Absensi.Controller
                         return Results.Unauthorized();
                     }
 
-                    // Gunakan PascalCase (Nama & Role) untuk model User
                     var userForJwt = new User
                     {
                         id = user.id,
@@ -127,6 +128,7 @@ namespace Absensi.Controller
                 }
                 catch (Exception ex)
                 {
+                    Console.WriteLine($"[REFRESH ERROR]: {ex.Message}");
                     return Results.BadRequest(new { message = ex.Message });
                 }
             });
@@ -153,6 +155,7 @@ namespace Absensi.Controller
                 }
                 catch (Exception ex)
                 {
+                    Console.WriteLine($"[ME ERROR]: {ex.Message}");
                     return Results.BadRequest(new { message = ex.Message });
                 }
             }).RequireAuthorization();

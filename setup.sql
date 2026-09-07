@@ -87,5 +87,5 @@ CREATE TABLE IF NOT EXISTS `absensi` (
 
 -- Data Awal (Seed Data)
 INSERT INTO `role` (`id`, `nama`) VALUES (1, 'Admin'), (2, 'PM'), (3, 'Guru'), (4, 'Anggota');
-INSERT INTO `divisi` (`id`, `nama`) VALUES (1, 'Backend'), (2, 'Frontend'), (3. 'Game');
+INSERT INTO `divisi` (`id`, `nama`) VALUES (1, 'Backend'), (2, 'Frontend'), (3, 'Game');
 INSERT INTO `status` (`id`, `nama`) VALUES (1, 'Null'), (2, 'On Progress'), (3, 'Done'), (4, 'Izin'), (5, 'Sakit');
