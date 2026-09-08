@@ -6,7 +6,13 @@ namespace Absensi.Services
     public class GuruService
     {
         private readonly Database db;
-        public GuruService(Database _db) => db = _db;
+        private readonly IPasswordService passwordService;
+
+        public GuruService(Database _db, IPasswordService _passwordService)
+        {
+            db = _db;
+            passwordService = _passwordService;
+        }
 
         public async Task<IEnumerable<UserDTO>> GetAll()
         {
@@ -35,15 +41,19 @@ namespace Absensi.Services
         public async Task<bool> Create(UserOTD data)
         {
             using var conn = db.connect();
+
+            string hashedPassword = passwordService.HashPassword(data.password);
+            int? divisiId = data.id_divisi > 0 ? data.id_divisi : null;
+
             string sql = @"INSERT INTO user(nama, password, id_role, id_divisi) 
                            VALUES(@nama, @password, @id_role, @id_divisi);";
 
             var result = await conn.ExecuteAsync(sql, new
             {
                 nama = data.nama,
-                password = data.password,
-                id_role = data.id_role,
-                id_divisi = data.id_divisi
+                password = hashedPassword,
+                id_role = 3,
+                id_divisi = divisiId
             });
 
             return result > 0;
@@ -52,6 +62,9 @@ namespace Absensi.Services
         public async Task<bool> Update(int id, UserOTD data)
         {
             using var conn = db.connect();
+
+            int? divisiId = data.id_divisi > 0 ? data.id_divisi : null;
+
             string sql = @"UPDATE user 
                            SET nama = @nama, 
                                id_role = @id_role, 
@@ -62,8 +75,8 @@ namespace Absensi.Services
             {
                 id,
                 nama = data.nama,
-                id_role = data.id_role,
-                id_divisi = data.id_divisi
+                id_role = 3,
+                id_divisi = divisiId
             });
 
             return result > 0;

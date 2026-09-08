@@ -6,21 +6,31 @@ namespace Absensi.Services
     public class AuthServices
     {
         private readonly Database db;
-        public AuthServices(Database _db) => db = _db;
+        private readonly IPasswordService passwordService;
+
+        public AuthServices(Database _db, IPasswordService _passwordService)
+        {
+            db = _db;
+            passwordService = _passwordService;
+        }
 
         // 1. REGISTER ADMIN
         public async Task<bool> AdminRegister(AdminOTD data)
         {
             using var conn = db.connect();
+
+            string hashedPassword = passwordService.HashPassword(data.password);
+            int? divisiId = data.id_divisi > 0 ? data.id_divisi : null;
+
             string sql = @"INSERT INTO user(nama, password, id_role, id_divisi) 
                            VALUES(@nama, @password, @id_role, @id_divisi);";
 
             var result = await conn.ExecuteAsync(sql, new
             {
                 nama = data.nama,
-                password = data.password,
+                password = hashedPassword,
                 id_role = 1, // 1 = Admin
-                id_divisi = data.id_divisi
+                id_divisi = divisiId
             });
 
             return result > 0;
@@ -47,7 +57,13 @@ namespace Absensi.Services
                            JOIN role r ON r.id = u.id_role
                            WHERE u.nama = @nama;";
 
-            return await conn.QueryFirstOrDefaultAsync<UserSessionModel>(sql, new { nama = data.nama });
+            var user = await conn.QueryFirstOrDefaultAsync<UserSessionModel>(sql, new { nama = data.nama });
+
+            if (user == null) return null;
+
+            bool isValid = passwordService.VerifyPassword(data.password, user.password);
+
+            return isValid ? user : null;
         }
 
         // 4. UPDATE REFRESH TOKEN DI DATABASE
