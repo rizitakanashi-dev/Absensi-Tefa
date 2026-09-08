@@ -6,6 +6,9 @@
 # dotenv files
 .env
 appsettings.json
+
+# Local Docker override (berisi credential lokal, jangan di-commit)
+docker-compose.override.yml
 # User-specific files
 *.rsuser
 *.suo

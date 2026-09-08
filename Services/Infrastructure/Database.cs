@@ -16,8 +16,9 @@ namespace Absensi.Services
         public MySqlConnection connect()
         {
             var connectionString = _config.GetConnectionString("DefaultConnection")
-                ?? _config["ConnectionStrings:DefaultConnection"]
-                ?? "Server=db;Port=3306;Database=absensi;Uid=absensi_user;Pwd=absensipassword;SslMode=Disabled;AllowPublicKeyRetrieval=True;";
+                ?? throw new InvalidOperationException(
+                    "Connection string 'DefaultConnection' tidak ditemukan. " +
+                    "Pastikan appsettings.json sudah dikonfigurasi.");
 
             return new MySqlConnection(connectionString);
         }
