@@ -1,11 +1,13 @@
 using Absensi.Models;
 using Absensi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Absensi.Controller
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class PMController : ControllerBase
     {
         private readonly PMService _pmService;
@@ -16,6 +18,7 @@ namespace Absensi.Controller
         }
 
         [HttpPost("register")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Register([FromBody] UserOTD data)
         {
             if (data == null)

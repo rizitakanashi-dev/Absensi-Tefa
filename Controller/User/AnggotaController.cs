@@ -1,23 +1,24 @@
 using Absensi.Models;
 using Absensi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Absensi.Controller
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class AnggotaController : ControllerBase
     {
         private readonly AnggotaService _anggotaService;
-        private readonly IPasswordService _passwordService;
 
-        public AnggotaController(AnggotaService anggotaService, IPasswordService passwordService)
+        public AnggotaController(AnggotaService anggotaService)
         {
             _anggotaService = anggotaService;
-            _passwordService = passwordService;
         }
 
         [HttpPost("register")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Register([FromBody] UserOTD data)
         {
             if (data == null || string.IsNullOrWhiteSpace(data.nama) || string.IsNullOrWhiteSpace(data.password))
@@ -25,9 +26,7 @@ namespace Absensi.Controller
                 return BadRequest(new { message = "Data Nama dan Password Tidak Boleh Kosong!" });
             }
 
-            // Hash password sebelum dikirim ke database
-            data.password = _passwordService.HashPassword(data.password);
-
+            // Hash password dilakukan di dalam service (AnggotaService.Register)
             var isSuccess = await _anggotaService.Register(data);
 
             if (isSuccess)

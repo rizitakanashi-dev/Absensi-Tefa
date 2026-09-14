@@ -44,11 +44,10 @@ namespace Absensi.Controller
             }).RequireAuthorization();
 
             // 3. CREATE GURU (Hanya Admin)
-            g.MapPost("/", async (GuruService service, [FromBody] UserOTD data, IPasswordService pServices) =>
+            g.MapPost("/", async (GuruService service, [FromBody] UserOTD data) =>
             {
                 try
                 {
-                    data.password = pServices.HashPassword(data.password);
                     var result = await service.Create(data);
 
                     return result 

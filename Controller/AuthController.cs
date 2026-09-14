@@ -12,7 +12,7 @@ namespace Absensi.Controller
             var g = app.MapGroup("/api/v1/auth");
 
             // 1. REGISTER ADMIN
-            g.MapPost("/register-admin", async (AuthServices services, AdminOTD data, IPasswordService pServices) =>
+            g.MapPost("/register-admin", async (AuthServices services, AdminOTD data) =>
             {
                 try
                 {
@@ -22,7 +22,6 @@ namespace Absensi.Controller
                         return Results.BadRequest(new { message = "Registrasi admin ditutup karena admin sudah ada" });
                     }
 
-                    data.password = pServices.HashPassword(data.password);
                     var result = await services.AdminRegister(data);
 
                     return result 
@@ -32,67 +31,69 @@ namespace Absensi.Controller
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[REGISTER ERROR]: {ex.Message}");
-                    return Results.BadRequest(new { message = ex.Message });
+                    return Results.BadRequest(new { message = "Terjadi kesalahan saat registrasi" });
                 }
             });
 
             // 2. LOGIN
-            g.MapPost("/login", async (AuthServices services, IPasswordService pServices, IJWTService jwtServices, Login login) =>
+            g.MapPost("/login", async (AuthServices services, IJWTService jwtServices, Login login) =>
             {
-                try
-                {
-                    if (login == null || string.IsNullOrWhiteSpace(login.nama) || string.IsNullOrWhiteSpace(login.password))
-                    {
-                        return Results.BadRequest(new { message = "Nama dan password wajib diisi" });
-                    }
+              try
+              {
+                  if (login == null || string.IsNullOrWhiteSpace(login.nama) || string.IsNullOrWhiteSpace(login.password))
+                  {
+                      return Results.BadRequest(new { message = "Nama dan password wajib diisi" });
+                  }
 
-                    var user = await services.Login(login);
-                    if (user == null)
-                    {
-                        return Results.Unauthorized();
-                    }
+                  var user = await services.Login(login);
+                  if (user == null)
+                  {
+                    return Results.Unauthorized();
+                  }
 
-                    bool isPasswordValid = false;
-                    try
-                    {
-                        isPasswordValid = pServices.VerifyPassword(login.password, user.password);
-                    }
-                    catch
-                    {
-                        isPasswordValid = (login.password == user.password);
-                    }
+                  // Verifikasi password secara langsung menggunakan BCrypt.Net
+                  bool isPasswordValid = false;
+                  // Hanya fallback ke perbandingan plaintext jika password di DB
+                  // memang bukan hash BCrypt (legacy row), bukan untuk menutupi error.
+                  if (user.password.StartsWith("$2", StringComparison.Ordinal))
+                  {
+                      isPasswordValid = BCrypt.Net.BCrypt.Verify(login.password, user.password);
+                  }
+                  else
+                  {
+                      isPasswordValid = (login.password == user.password);
+                  }
 
-                    if (!isPasswordValid)
+                  if (!isPasswordValid)
+                  {
+                      return Results.Unauthorized();
+                  }
+
+                  var userForJwt = new User
+                  {
+                      id = user.id,
+                      Nama = user.nama,
+                      Role = user.role
+                  };
+
+                  var token = jwtServices.GenerateToken(userForJwt);
+                  var refreshToken = jwtServices.GenerateRefreshToken();
+
+                  await services.UpdateRefreshToken(refreshToken, DateTime.UtcNow.AddDays(20), user.id);
+
+                  return Results.Ok(new LoginResponse
                     {
-                        return Results.Unauthorized();
-                    }
-
-                    var userForJwt = new User
-                    {
-                        id = user.id,
-                        Nama = user.nama,
-                        Role = user.role
-                    };
-
-                    var token = jwtServices.GenerateToken(userForJwt);
-                    var refreshToken = jwtServices.GenerateRefreshToken();
-
-                    await services.UpdateRefreshToken(refreshToken, DateTime.UtcNow.AddDays(20), user.id);
-
-                    return Results.Ok(new LoginResponse
-                    {
-                        Token = token,
-                        Refresh_Token = refreshToken,
-                        Nama = user.nama,
-                        Role = user.role
+                      Token = token,
+                      Refresh_Token = refreshToken,
+                      Nama = user.nama,
+                      Role = user.role
                     });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[LOGIN EXCEPTION]: {ex.Message}");
-                    Console.WriteLine($"[LOGIN STACK TRACE]: {ex.StackTrace}");
-                    return Results.BadRequest(new { message = ex.Message, detail = ex.StackTrace });
-                }
+              }
+              catch (Exception ex)
+              {
+                  Console.WriteLine($"[LOGIN EXCEPTION]: {ex.Message}");
+                  return Results.BadRequest(new { message = "Terjadi kesalahan saat login" });
+              }
             });
 
             // 3. REFRESH TOKEN
@@ -129,7 +130,7 @@ namespace Absensi.Controller
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[REFRESH ERROR]: {ex.Message}");
-                    return Results.BadRequest(new { message = ex.Message });
+                    return Results.BadRequest(new { message = "Terjadi kesalahan saat refresh token" });
                 }
             });
 
@@ -156,7 +157,7 @@ namespace Absensi.Controller
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[ME ERROR]: {ex.Message}");
-                    return Results.BadRequest(new { message = ex.Message });
+                    return Results.BadRequest(new { message = "Terjadi kesalahan saat mengambil profil" });
                 }
             }).RequireAuthorization();
         }

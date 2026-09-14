@@ -22,10 +22,11 @@ namespace Absensi.Controller
                     }
                     catch (Exception e)
                     {
-                        return Results.BadRequest(new { message = e.Message });
+                        Console.WriteLine($"ABSEN GET: {e.Message}");
+                        return Results.BadRequest(new { message = "Gagal mengambil rekap absen" });
                     }
-                    
-    
+
+
                 });
 
             g.MapPost("/masuk", async (AbsenMasukDTO req, ClaimsPrincipal user, AbsensiService service) =>
@@ -45,7 +46,8 @@ namespace Absensi.Controller
                     }
                     catch (Exception e)
                     {
-                        return Results.BadRequest(new { message = e.Message });
+                        Console.WriteLine($"ABSEN MASUK: {e.Message}");
+                        return Results.BadRequest(new { message = "Gagal melakukan absen masuk" });
                     }
                 });
 
@@ -62,7 +64,8 @@ namespace Absensi.Controller
                   }
                   catch (Exception e)
                   {
-                      return Results.BadRequest(new { message = e.Message });
+                      Console.WriteLine($"ABSEN PULANG: {e.Message}");
+                      return Results.BadRequest(new { message = "Gagal melakukan absen pulang" });
                   }
               });
         }

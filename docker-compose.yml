@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Database MySQL
   db:
@@ -35,8 +33,9 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8080
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING:-Server=db;Port=3306;Database=absensi;Uid=absensi_user;Pwd=absensipassword_dev;SslMode=Disabled;AllowPublicKeyRetrieval=True;}
-      - JWT__Key=${JWT_KEY:-GANTI_INI_DENGAN_SECRET_KEY_MINIMAL_32_KARAKTER_xx}
+      - ConnectionStrings__DefaultConnection=Server=db;Port=3306;Database=absensi;Uid=absensi_user;Pwd=absensipassword_dev;SslMode=Disabled;AllowPublicKeyRetrieval=True;
+      - JWT__Key=${JWT_KEY:-CHANGE_ME_IN_PRODUCTION_REPLACE_WITH_MIN_32_CHAR_SECRET}
+      - AllowedOrigins=http://localhost:5173,http://localhost:5174
     depends_on:
       db:
         condition: service_healthy

@@ -674,8 +674,8 @@ Mengambil profil user yang sedang login berdasarkan JWT claim.
 ---
 
 #### Anggota — `/api/Anggota`
-
 | Method | Endpoint                | Auth | Deskripsi                   |
+
 | ------ | ----------------------- | ---- | --------------------------- |
 | GET    | `/api/Anggota`          | ❌    | Ambil semua anggota         |
 | POST   | `/api/Anggota/register` | ❌    | Daftarkan anggota baru      |

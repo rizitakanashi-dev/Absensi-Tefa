@@ -65,17 +65,15 @@ namespace Absensi.Services
 
             int? divisiId = data.id_divisi > 0 ? data.id_divisi : null;
 
-            string sql = @"UPDATE user 
-                           SET nama = @nama, 
-                               id_role = @id_role, 
-                               id_divisi = @id_divisi 
-                           WHERE id = @id;";
+            string sql = @"UPDATE user
+                           SET nama = @nama,
+                               id_divisi = @id_divisi
+                           WHERE id = @id AND id_role = 3;";
 
             var result = await conn.ExecuteAsync(sql, new
             {
                 id,
                 nama = data.nama,
-                id_role = 3,
                 id_divisi = divisiId
             });
 
@@ -85,7 +83,7 @@ namespace Absensi.Services
         public async Task<bool> Delete(int id)
         {
             using var conn = db.connect();
-            string sql = "DELETE FROM user WHERE id = @id;";
+            string sql = "DELETE FROM user WHERE id = @id AND id_role = 3;";
             var result = await conn.ExecuteAsync(sql, new { id });
 
             return result > 0;

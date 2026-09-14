@@ -1,23 +1,23 @@
 using Absensi.Models;
-using System.Data;
 using Dapper;
 
 namespace Absensi.Services
 {
     public class ProjectAnggotaService
     {
-        private readonly IDbConnection _db;
+        private readonly Database db;
 
-        public ProjectAnggotaService(IDbConnection db)
+        public ProjectAnggotaService(Database _db)
         {
-            _db = db;
+            db = _db;
         }
 
         // GET Semua Project Anggota
         public async Task<IEnumerable<ProjectAnggota>> GetAll()
         {
+            using var conn = db.connect();
             string sql = @"
-                SELECT 
+                SELECT
                     pa.id AS Id,
                     pa.id_user AS IdUser,
                     pa.id_project AS IdProject,
@@ -27,25 +27,27 @@ namespace Absensi.Services
                 JOIN user u ON u.id = pa.id_user
                 JOIN project p ON p.id = pa.id_project";
 
-            return await _db.QueryAsync<ProjectAnggota>(sql);
+            return await conn.QueryAsync<ProjectAnggota>(sql);
         }
 
         // POST Tambah Anggota Ke Project
         public async Task<bool> Create(ProjectAnggotaDto req)
         {
+            using var conn = db.connect();
             string sql = @"
-                INSERT INTO project_anggota (id_user, id_project) 
+                INSERT INTO project_anggota (id_user, id_project)
                 VALUES (@User, @Project)";
 
-            int rows = await _db.ExecuteAsync(sql, new { User = req.User, Project = req.Project });
+            int rows = await conn.ExecuteAsync(sql, new { User = req.User, Project = req.Project });
             return rows > 0;
         }
 
         // DELETE Hapus Anggota Dari Project
         public async Task<bool> Delete(int id)
         {
+            using var conn = db.connect();
             string sql = "DELETE FROM project_anggota WHERE id = @Id;";
-            int rows = await _db.ExecuteAsync(sql, new { Id = id });
+            int rows = await conn.ExecuteAsync(sql, new { Id = id });
             return rows > 0;
         }
     }

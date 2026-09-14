@@ -40,14 +40,14 @@ namespace Absensi.Models
   public static class Policies
   {
     public const string Admin = "Admin";
-    public const string ProjectManager = "Project Manager";
+    public const string ProjectManager = "PM";
     public const string Guru = "Guru";
     public const string Anggota = "Anggota";
 
     public static void Register(AuthorizationOptions options)
     {
       options.AddPolicy(Admin, p => p.RequireRole("Admin"));
-      options.AddPolicy(ProjectManager, p => p.RequireRole("Project Manager"));
+      options.AddPolicy(ProjectManager, p => p.RequireRole("PM"));
       options.AddPolicy(Guru, p => p.RequireRole("Guru"));
       options.AddPolicy(Anggota, p => p.RequireRole("Anggota"));
     }

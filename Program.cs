@@ -13,9 +13,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<Database>();
 
-builder.Services.AddScoped<IDbConnection>(sp =>
-    sp.GetRequiredService<Database>().connect());
-
 builder.Services.AddAuthorization(Policies.Register);
 
 builder.Services.AddControllers();
@@ -46,15 +43,19 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"] ?? "SUPER_SECRET_KEY_KAMU_MINIMAL_32_KARAKTER"))
+            Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"] ?? throw new InvalidOperationException(
+                "JWT:Key belum dikonfigurasi. Set via env 'JWT__Key' atau appsettings.")))
     };
 });
+
+var allowedOrigins = (builder.Configuration["AllowedOrigins"] ?? "")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(_ => true)
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -106,6 +107,7 @@ app.MapProject();
 app.MapRole();
 app.MapStatus();
 app.MapAuth();
+app.MapGuru();
 app.MapControllers();
 app.MapAbsensiEndpoints();
 

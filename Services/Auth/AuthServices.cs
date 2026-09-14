@@ -54,16 +54,10 @@ namespace Absensi.Services
                             u.password AS password, 
                             r.nama AS role
                            FROM user u
-                           JOIN role r ON r.id = u.id_role
+                           LEFT JOIN role r ON r.id = u.id_role
                            WHERE u.nama = @nama;";
 
-            var user = await conn.QueryFirstOrDefaultAsync<UserSessionModel>(sql, new { nama = data.nama });
-
-            if (user == null) return null;
-
-            bool isValid = passwordService.VerifyPassword(data.password, user.password);
-
-            return isValid ? user : null;
+            return await conn.QueryFirstOrDefaultAsync<UserSessionModel>(sql, new { nama = data.nama });
         }
 
         // 4. UPDATE REFRESH TOKEN DI DATABASE

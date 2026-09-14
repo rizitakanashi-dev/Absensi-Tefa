@@ -8,6 +8,7 @@ namespace Absensi.Controller
         public static void MapProject(this WebApplication app)
         {
             var g = app.MapGroup("/api/v1/project");
+            g.RequireAuthorization();
 
             g.MapGet("/", async (ProjectService services) =>
             {
@@ -18,7 +19,8 @@ namespace Absensi.Controller
                 }
                 catch (Exception e)
                 {
-                    return Results.InternalServerError(e.Message);
+                    Console.WriteLine($"PROJECT GET: {e.Message}");
+                    return Results.Problem("Gagal mengambil data project");
                 }
             });
 
@@ -32,7 +34,8 @@ namespace Absensi.Controller
                 }
                 catch (Exception e)
                 {
-                    return Results.InternalServerError(e.Message);
+                    Console.WriteLine($"PROJECT GET BY ID: {e.Message}");
+                    return Results.Problem("Gagal mengambil data project");
                 }
             });
 
@@ -45,9 +48,10 @@ namespace Absensi.Controller
                 }
                 catch (Exception e)
                 {
-                    return Results.InternalServerError(e.Message);
+                    Console.WriteLine($"PROJECT POST: {e.Message}");
+                    return Results.Problem("Gagal menambahkan project");
                 }
-            });
+            }).RequireAuthorization("Admin");
 
             g.MapPut("/{id:int}", async (int id, ProjectDTO dto, ProjectService services) =>
             {
@@ -60,9 +64,10 @@ namespace Absensi.Controller
                 }
                 catch (Exception e)
                 {
-                    return Results.InternalServerError(e.Message);
+                    Console.WriteLine($"PROJECT PUT: {e.Message}");
+                    return Results.Problem("Gagal memperbarui project");
                 }
-            });
+            }).RequireAuthorization("Admin");
 
             g.MapDelete("/{id:int}", async (int id, ProjectService services) =>
             {
@@ -74,9 +79,10 @@ namespace Absensi.Controller
                 }
                 catch (Exception e)
                 {
-                    return Results.InternalServerError(e.Message);
+                    Console.WriteLine($"PROJECT DELETE: {e.Message}");
+                    return Results.Problem("Gagal menghapus project");
                 }
-            });
+            }).RequireAuthorization("Admin");
         }
     }
 }

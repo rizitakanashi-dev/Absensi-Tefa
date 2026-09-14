@@ -8,6 +8,7 @@ namespace Absensi.Controller
         public static void MapDivisi(this WebApplication app)
         {
             var g = app.MapGroup("/api/v1/divisi");
+            g.RequireAuthorization();
 
             g.MapGet("/", async (DivisiService services) =>
             {
@@ -18,7 +19,8 @@ namespace Absensi.Controller
                 }
                 catch (Exception e)
                 {
-                    return Results.InternalServerError(e.Message);
+                    Console.WriteLine($"DIVISI GET: {e.Message}");
+                    return Results.Problem("Gagal mengambil data divisi");
                 }
             });
 
@@ -32,7 +34,8 @@ namespace Absensi.Controller
                 }
                 catch (Exception e)
                 {
-                    return Results.InternalServerError(e.Message);
+                    Console.WriteLine($"DIVISI GET BY ID: {e.Message}");
+                    return Results.Problem("Gagal mengambil data divisi");
                 }
             });
 
@@ -45,9 +48,10 @@ namespace Absensi.Controller
                 }
                 catch (Exception e)
                 {
-                    return Results.InternalServerError(e.Message);
+                    Console.WriteLine($"DIVISI POST: {e.Message}");
+                    return Results.Problem("Gagal menambahkan divisi");
                 }
-            });
+            }).RequireAuthorization("Admin");
 
             g.MapPut("/{id:int}", async (int id, DivisiDTO dto, DivisiService services) =>
             {
@@ -60,9 +64,10 @@ namespace Absensi.Controller
                 }
                 catch (Exception e)
                 {
-                    return Results.InternalServerError(e.Message);
+                    Console.WriteLine($"DIVISI PUT: {e.Message}");
+                    return Results.Problem("Gagal memperbarui divisi");
                 }
-            });
+            }).RequireAuthorization("Admin");
 
             g.MapDelete("/{id:int}", async (int id, DivisiService services) =>
             {
@@ -74,9 +79,10 @@ namespace Absensi.Controller
                 }
                 catch (Exception e)
                 {
-                    return Results.InternalServerError(e.Message);
+                    Console.WriteLine($"DIVISI DELETE: {e.Message}");
+                    return Results.Problem("Gagal menghapus divisi");
                 }
-            });
+            }).RequireAuthorization("Admin");
         }
     }
 }

@@ -18,7 +18,8 @@ namespace Absensi.Controller
                     }
                     catch (Exception e)
                     {
-                        return Results.InternalServerError(e.Message);
+                        Console.WriteLine($"STATUS GET: {e.Message}");
+                        return Results.Problem("Gagal mengambil data status");
                     }
                 });
         }

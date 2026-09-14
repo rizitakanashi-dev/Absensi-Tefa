@@ -29,6 +29,11 @@ namespace Absensi.Controller
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ProjectAnggotaDto req)
         {
+            if (req == null || req.User <= 0 || req.Project <= 0)
+            {
+                return BadRequest(new { message = "Data user/id project tidak valid" });
+            }
+
             var result = await _service.Create(req);
             if (!result)
             {

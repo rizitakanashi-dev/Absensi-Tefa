@@ -10,12 +10,6 @@ namespace Absensi.Models
         public string Project { get; set; } = string.Empty;
     }
 
-    public class ProjectAnggotaOtd
-    {
-        public int IdUser { get; set; }
-        public int IdProject { get; set; }
-    }
-
     public class ProjectAnggotaDto
     {
         public int User { get; set; }

@@ -16,11 +16,11 @@ namespace Absensi.Services
             return result.ToList();
         }
 
-        public async Task<DivisiDTO?> GetById(int id)
+        public async Task<ProjectDTO?> GetById(int id)
         {
             using var conn = db.connect();
             string sql = @"SELECT * FROM project WHERE id = @id;";
-            return await conn.QueryFirstOrDefaultAsync<DivisiDTO>(sql, new { id });
+            return await conn.QueryFirstOrDefaultAsync<ProjectDTO>(sql, new { id });
         }
 
         public async Task<int> Create(ProjectDTO project)
