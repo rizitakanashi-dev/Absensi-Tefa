@@ -7,7 +7,7 @@ namespace Absensi.Controller
     {
         public static void MapRole(this WebApplication app)
         {
-            var g = app.MapGroup("/api/v1/role");
+            var g = app.MapGroup("/api/v1/role").RequireAuthorization();
 
             g.MapGet("/", async (RoleServices services) =>
             {

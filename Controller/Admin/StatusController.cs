@@ -7,7 +7,7 @@ namespace Absensi.Controller
     {
         public static void MapStatus(this WebApplication app)
         {
-            var g = app.MapGroup("/api/v1/status");
+            var g = app.MapGroup("/api/v1/status").RequireAuthorization();
 
             g.MapGet("/", async (StatusService services) =>
                 {

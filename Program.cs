@@ -3,9 +3,11 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Diagnostics;
 using System.Data;
+using System.Threading.RateLimiting;
 using Absensi.Services;
 using Absensi.Controller;
 using Absensi.Models;
+using Absensi.Middlewares;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,7 +15,49 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<Database>();
 
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database");
+
 builder.Services.AddAuthorization(Policies.Register);
+
+// Rate Limiting Configuration
+builder.Services.AddRateLimiter(options =>
+{
+    // Policy untuk authentication endpoints (login, register)
+    options.AddPolicy("auth", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 2
+        }));
+
+    // Policy umum untuk API endpoints
+    options.AddPolicy("api", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 100,
+            Window = TimeSpan.FromMinutes(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 5
+        }));
+
+    // Response saat rate limit exceeded
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = 429;
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            message = "Terlalu banyak request. Silakan coba lagi nanti.",
+            retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter) 
+                ? (double?)retryAfter.TotalSeconds 
+                : null
+        }, cancellationToken: token);
+    };
+});
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
@@ -28,6 +72,7 @@ builder.Services.AddScoped<GuruService>();
 builder.Services.AddScoped<PMService>();
 builder.Services.AddScoped<AbsensiService>();
 builder.Services.AddScoped<ProjectAnggotaService>();
+builder.Services.AddScoped<TargetService>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -55,10 +100,21 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
+        // When AllowedOrigins is not configured (local `dotnet run`), allow any
+        // origin so the frontend can reach the API across machines during dev.
+        if (allowedOrigins.Length == 0)
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        }
     });
 });
 
@@ -66,9 +122,13 @@ var app = builder.Build();
 
 Env.Value = app.Configuration;
 
+app.UseGlobalExceptionHandler();
+
 app.UseCors("AllowFrontend");
 
-if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+app.UseRateLimiter();
+
+if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
@@ -102,12 +162,15 @@ app.Use(async (context, next) =>
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHealthChecks("/health");
+
 app.MapDivisi();
 app.MapProject();
 app.MapRole();
 app.MapStatus();
 app.MapAuth();
 app.MapGuru();
+app.MapTarget();
 app.MapControllers();
 app.MapAbsensiEndpoints();
 

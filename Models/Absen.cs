@@ -3,6 +3,7 @@ namespace Absensi.Models
     public class AbsenRekapDTO
     {
         public int IdAbsensi { get; set; }
+        public int IdTarget { get; set; }
         public string Tanggal { get; set; } = string.Empty;
         public string Nama { get; set; } = string.Empty;
         public string Divisi { get; set; } = string.Empty;

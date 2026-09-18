@@ -27,23 +27,61 @@ namespace Absensi.Services
         public async Task<int> Create(DivisiDTO divisi)
         {
             using var conn = db.connect();
-            string sql = @"
-        INSERT INTO divisi(nama) VALUES(@nama);";
-            return await conn.ExecuteAsync(sql, divisi);
+            await conn.OpenAsync();
+
+            using var transaction = await conn.BeginTransactionAsync();
+            try
+            {
+                string sql = @"INSERT INTO divisi(nama) VALUES(@nama);";
+                var result = await conn.ExecuteAsync(sql, divisi, transaction);
+                await transaction.CommitAsync();
+                return result;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<int> Update(DivisiDTO divisi)
         {
             using var conn = db.connect();
-            string sql = @"UPDATE divisi SET nama = @nama WHERE id = @id;";
-            return await conn.ExecuteAsync(sql, divisi);
+            await conn.OpenAsync();
+
+            using var transaction = await conn.BeginTransactionAsync();
+            try
+            {
+                string sql = @"UPDATE divisi SET nama = @nama WHERE id = @id;";
+                var result = await conn.ExecuteAsync(sql, divisi, transaction);
+                await transaction.CommitAsync();
+                return result;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<int> Delete(int id)
         {
             using var conn = db.connect();
-            string sql = @"DELETE FROM divisi WHERE id = @id;";
-            return await conn.ExecuteAsync(sql, new { id });
+            await conn.OpenAsync();
+
+            using var transaction = await conn.BeginTransactionAsync();
+            try
+            {
+                string sql = @"DELETE FROM divisi WHERE id = @id;";
+                var result = await conn.ExecuteAsync(sql, new { id }, transaction);
+                await transaction.CommitAsync();
+                return result;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
     }
 }

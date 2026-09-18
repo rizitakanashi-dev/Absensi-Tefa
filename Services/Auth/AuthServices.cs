@@ -29,7 +29,7 @@ namespace Absensi.Services
             {
                 nama = data.nama,
                 password = hashedPassword,
-                id_role = 1, // 1 = Admin
+                id_role = RoleIds.Admin,
                 id_divisi = divisiId
             });
 
@@ -40,7 +40,8 @@ namespace Absensi.Services
         public async Task<bool> IsRegistered()
         {
             using var conn = db.connect();
-            var count = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM user WHERE id_role = 1;");
+            var count = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM user WHERE id_role = @AdminRole;", 
+                new { AdminRole = RoleIds.Admin });
             return count > 0;
         }
 
@@ -103,6 +104,19 @@ namespace Absensi.Services
                            WHERE u.id = @userId;";
 
             return await conn.QueryFirstOrDefaultAsync<UserDTO>(sql, new { userId });
+        }
+
+        // 7. LOGOUT - INVALIDATE REFRESH TOKEN
+        public async Task<bool> Logout(int userId)
+        {
+            using var conn = db.connect();
+            string sql = @"UPDATE user 
+                           SET refresh_token = NULL, 
+                               refresh_token_expired = NULL 
+                           WHERE id = @userId;";
+
+            var result = await conn.ExecuteAsync(sql, new { userId });
+            return result > 0;
         }
     }
 }

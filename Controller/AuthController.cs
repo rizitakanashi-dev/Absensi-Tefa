@@ -33,7 +33,7 @@ namespace Absensi.Controller
                     Console.WriteLine($"[REGISTER ERROR]: {ex.Message}");
                     return Results.BadRequest(new { message = "Terjadi kesalahan saat registrasi" });
                 }
-            });
+            }).RequireRateLimiting("auth");
 
             // 2. LOGIN
             g.MapPost("/login", async (AuthServices services, IJWTService jwtServices, Login login) =>
@@ -51,20 +51,8 @@ namespace Absensi.Controller
                     return Results.Unauthorized();
                   }
 
-                  // Verifikasi password secara langsung menggunakan BCrypt.Net
-                  bool isPasswordValid = false;
-                  // Hanya fallback ke perbandingan plaintext jika password di DB
-                  // memang bukan hash BCrypt (legacy row), bukan untuk menutupi error.
-                  if (user.password.StartsWith("$2", StringComparison.Ordinal))
-                  {
-                      isPasswordValid = BCrypt.Net.BCrypt.Verify(login.password, user.password);
-                  }
-                  else
-                  {
-                      isPasswordValid = (login.password == user.password);
-                  }
-
-                  if (!isPasswordValid)
+                  // Verifikasi password menggunakan BCrypt
+                  if (!BCrypt.Net.BCrypt.Verify(login.password, user.password))
                   {
                       return Results.Unauthorized();
                   }
@@ -94,7 +82,7 @@ namespace Absensi.Controller
                   Console.WriteLine($"[LOGIN EXCEPTION]: {ex.Message}");
                   return Results.BadRequest(new { message = "Terjadi kesalahan saat login" });
               }
-            });
+            }).RequireRateLimiting("auth");
 
             // 3. REFRESH TOKEN
             g.MapPost("/refresh", async (AuthServices services, RefreshRequest req, IJWTService jwtService) =>
@@ -132,7 +120,7 @@ namespace Absensi.Controller
                     Console.WriteLine($"[REFRESH ERROR]: {ex.Message}");
                     return Results.BadRequest(new { message = "Terjadi kesalahan saat refresh token" });
                 }
-            });
+            }).RequireRateLimiting("auth");
 
             // 4. GET ME (PROFIL USER LOGIN)
             g.MapGet("/me", async (AuthServices services, HttpContext httpContext) =>
@@ -158,6 +146,33 @@ namespace Absensi.Controller
                 {
                     Console.WriteLine($"[ME ERROR]: {ex.Message}");
                     return Results.BadRequest(new { message = "Terjadi kesalahan saat mengambil profil" });
+                }
+            }).RequireAuthorization();
+
+            // 5. LOGOUT (INVALIDATE REFRESH TOKEN)
+            g.MapPost("/logout", async (AuthServices services, HttpContext httpContext) =>
+            {
+                try
+                {
+                    var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                    if (!int.TryParse(userIdClaim, out var userId))
+                    {
+                        return Results.Unauthorized();
+                    }
+
+                    var result = await services.Logout(userId);
+                    if (!result)
+                    {
+                        return Results.BadRequest(new { message = "Gagal melakukan logout" });
+                    }
+
+                    return Results.Ok(new { message = "Logout berhasil" });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LOGOUT ERROR]: {ex.Message}");
+                    return Results.BadRequest(new { message = "Terjadi kesalahan saat logout" });
                 }
             }).RequireAuthorization();
         }

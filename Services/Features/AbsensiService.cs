@@ -12,12 +12,15 @@ namespace Absensi.Services
             db = _db;
         }
 
-        public async Task<IEnumerable<AbsenRekapDTO>> GetRekapByTanggal(string tanggal)
+        public async Task<IEnumerable<AbsenRekapDTO>> GetRekapByTanggal(string tanggal, int page, int pageSize)
         {
             using var conn = db.connect();
+            int offset = (page - 1) * pageSize;
+
             string sql = @"
                 SELECT
                     a.id AS IdAbsensi,
+                    t.id AS IdTarget,
                     DATE_FORMAT(a.tanggal, '%Y-%m-%d') AS Tanggal,
                     u.nama AS Nama,
                     COALESCE(d.nama, '-') AS Divisi,
@@ -32,9 +35,34 @@ namespace Absensi.Services
                 LEFT JOIN divisi d ON d.id = u.id_divisi
                 LEFT JOIN project p ON p.id = t.id_project
                 LEFT JOIN status s ON s.id = t.id_status
-                WHERE a.tanggal = @Tanggal AND u.id_role != 1";
+                WHERE a.tanggal = @Tanggal AND u.id_role != @AdminRole
+                ORDER BY a.id DESC
+                LIMIT @PageSize OFFSET @Offset";
 
-            return await conn.QueryAsync<AbsenRekapDTO>(sql, new { Tanggal = tanggal });
+            return await conn.QueryAsync<AbsenRekapDTO>(sql, new
+            {
+                Tanggal = tanggal,
+                AdminRole = RoleIds.Admin,
+                PageSize = pageSize,
+                Offset = offset
+            });
+        }
+
+        public async Task<int> GetRekapCount(string tanggal)
+        {
+            using var conn = db.connect();
+            string sql = @"
+                SELECT COUNT(*)
+                FROM absensi a
+                LEFT JOIN target t ON t.id = a.id_target
+                LEFT JOIN user u ON u.id = t.id_user
+                WHERE a.tanggal = @Tanggal AND u.id_role != @AdminRole";
+
+            return await conn.ExecuteScalarAsync<int>(sql, new
+            {
+                Tanggal = tanggal,
+                AdminRole = RoleIds.Admin
+            });
         }
 
         public async Task<bool> AbsenMasuk(int idUser, AbsenMasukDTO req)

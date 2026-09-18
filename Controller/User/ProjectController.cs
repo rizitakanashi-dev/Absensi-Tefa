@@ -51,7 +51,7 @@ namespace Absensi.Controller
                     Console.WriteLine($"PROJECT POST: {e.Message}");
                     return Results.Problem("Gagal menambahkan project");
                 }
-            }).RequireAuthorization("Admin");
+            }).RequireAuthorization(policy => policy.RequireRole("Admin", "PM"));
 
             g.MapPut("/{id:int}", async (int id, ProjectDTO dto, ProjectService services) =>
             {
@@ -67,7 +67,7 @@ namespace Absensi.Controller
                     Console.WriteLine($"PROJECT PUT: {e.Message}");
                     return Results.Problem("Gagal memperbarui project");
                 }
-            }).RequireAuthorization("Admin");
+            }).RequireAuthorization(policy => policy.RequireRole("Admin", "PM"));
 
             g.MapDelete("/{id:int}", async (int id, ProjectService services) =>
             {
@@ -82,7 +82,7 @@ namespace Absensi.Controller
                     Console.WriteLine($"PROJECT DELETE: {e.Message}");
                     return Results.Problem("Gagal menghapus project");
                 }
-            }).RequireAuthorization("Admin");
+            }).RequireAuthorization(policy => policy.RequireRole("Admin", "PM"));
         }
     }
 }

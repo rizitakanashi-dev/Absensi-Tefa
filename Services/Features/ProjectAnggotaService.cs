@@ -34,21 +34,45 @@ namespace Absensi.Services
         public async Task<bool> Create(ProjectAnggotaDto req)
         {
             using var conn = db.connect();
-            string sql = @"
-                INSERT INTO project_anggota (id_user, id_project)
-                VALUES (@User, @Project)";
+            await conn.OpenAsync();
 
-            int rows = await conn.ExecuteAsync(sql, new { User = req.User, Project = req.Project });
-            return rows > 0;
+            using var transaction = await conn.BeginTransactionAsync();
+            try
+            {
+                string sql = @"
+                    INSERT INTO project_anggota (id_user, id_project)
+                    VALUES (@User, @Project)";
+
+                int rows = await conn.ExecuteAsync(sql, new { User = req.User, Project = req.Project }, transaction);
+                await transaction.CommitAsync();
+                return rows > 0;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         // DELETE Hapus Anggota Dari Project
         public async Task<bool> Delete(int id)
         {
             using var conn = db.connect();
-            string sql = "DELETE FROM project_anggota WHERE id = @Id;";
-            int rows = await conn.ExecuteAsync(sql, new { Id = id });
-            return rows > 0;
+            await conn.OpenAsync();
+
+            using var transaction = await conn.BeginTransactionAsync();
+            try
+            {
+                string sql = "DELETE FROM project_anggota WHERE id = @Id;";
+                int rows = await conn.ExecuteAsync(sql, new { Id = id }, transaction);
+                await transaction.CommitAsync();
+                return rows > 0;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
     }
 }

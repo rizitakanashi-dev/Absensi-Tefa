@@ -10,15 +10,41 @@ namespace Absensi.Controller
         {
             var g = app.MapGroup("/api/v1/absen").RequireAuthorization();
 
-            g.MapGet("/", async (string tanggal, AbsensiService service) =>
+            g.MapGet("/", async (string tanggal, int? page, int? pageSize, AbsensiService service) =>
                 {
                     try
                     {
                         if (string.IsNullOrEmpty(tanggal))
                             return Results.BadRequest(new { message = "parameter tanggal wajib diisi" });
 
-                        var result = await service.GetRekapByTanggal(tanggal);
-                        return Results.Ok(result);
+                        // Validasi format tanggal untuk mencegah SQL injection
+                        if (!DateTime.TryParseExact(tanggal, "yyyy-MM-dd", null, 
+                            System.Globalization.DateTimeStyles.None, out _))
+                        {
+                            return Results.BadRequest(new { message = "Format tanggal harus yyyy-MM-dd" });
+                        }
+
+                        // Default pagination values
+                        int currentPage = page ?? 1;
+                        int size = pageSize ?? 50;
+
+                        if (currentPage < 1) currentPage = 1;
+                        if (size < 1 || size > 100) size = 50; // Max 100 per page
+
+                        var result = await service.GetRekapByTanggal(tanggal, currentPage, size);
+                        var totalCount = await service.GetRekapCount(tanggal);
+
+                        return Results.Ok(new
+                        {
+                            data = result,
+                            pagination = new
+                            {
+                                page = currentPage,
+                                pageSize = size,
+                                totalRecords = totalCount,
+                                totalPages = (int)Math.Ceiling((double)totalCount / size)
+                            }
+                        });
                     }
                     catch (Exception e)
                     {

@@ -32,7 +32,7 @@ namespace Absensi.Services
                 {
                     nama = data.nama,
                     password = hashedPassword,
-                    id_role = 4, // 4 = Anggota
+                    id_role = RoleIds.Anggota,
                     id_divisi = divisiId
                 }, transaction);
 
@@ -53,9 +53,9 @@ namespace Absensi.Services
                            FROM user u
                            JOIN role r ON r.id = u.id_role
                            LEFT JOIN divisi d ON d.id = u.id_divisi
-                           WHERE u.id_role = 4;";
+                           WHERE u.id_role = @RoleAnggota;";
 
-            var result = await conn.QueryAsync<UserDTO>(sql);
+            var result = await conn.QueryAsync<UserDTO>(sql, new { RoleAnggota = RoleIds.Anggota });
             return result.ToList();
         }
 
@@ -66,9 +66,9 @@ namespace Absensi.Services
                            FROM user u
                            JOIN role r ON r.id = u.id_role
                            LEFT JOIN divisi d ON d.id = u.id_divisi
-                           WHERE u.id = @id AND u.id_role = 4;";
+                           WHERE u.id = @id AND u.id_role = @RoleAnggota;";
 
-            return await conn.QueryFirstOrDefaultAsync<UserDTO>(sql, new { id });
+            return await conn.QueryFirstOrDefaultAsync<UserDTO>(sql, new { id, RoleAnggota = RoleIds.Anggota });
         }
 
         public async Task<bool> Update(int id, UserOTD data)
@@ -79,13 +79,14 @@ namespace Absensi.Services
             string sql = @"UPDATE user 
                            SET nama = @nama, 
                                id_divisi = @id_divisi 
-                           WHERE id = @id AND id_role = 4;";
+                           WHERE id = @id AND id_role = @RoleAnggota;";
 
             var result = await conn.ExecuteAsync(sql, new
             {
                 id,
                 nama = data.nama,
-                id_divisi = divisiId
+                id_divisi = divisiId,
+                RoleAnggota = RoleIds.Anggota
             });
 
             return result > 0;
@@ -94,8 +95,8 @@ namespace Absensi.Services
         public async Task<bool> Delete(int id)
         {
             using var conn = db.connect();
-            string sql = "DELETE FROM user WHERE id = @id AND id_role = 4;";
-            var result = await conn.ExecuteAsync(sql, new { id });
+            string sql = "DELETE FROM user WHERE id = @id AND id_role = @RoleAnggota;";
+            var result = await conn.ExecuteAsync(sql, new { id, RoleAnggota = RoleIds.Anggota });
 
             return result > 0;
         }
