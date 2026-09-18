@@ -73,6 +73,8 @@ builder.Services.AddScoped<PMService>();
 builder.Services.AddScoped<AbsensiService>();
 builder.Services.AddScoped<ProjectAnggotaService>();
 builder.Services.AddScoped<TargetService>();
+builder.Services.AddScoped<HostingRequestService>();
+builder.Services.AddScoped<DevOpsService>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -171,6 +173,7 @@ app.MapStatus();
 app.MapAuth();
 app.MapGuru();
 app.MapTarget();
+app.MapHostingRequest();
 app.MapControllers();
 app.MapAbsensiEndpoints();
 
