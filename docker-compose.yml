@@ -1,0 +1,44 @@
+services:
+  # Database MySQL
+  db:
+    image: mysql:8.0
+    container_name: absensi_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword_dev}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-absensi}
+      MYSQL_USER: ${MYSQL_USER:-absensi_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-absensipassword_dev}
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./setup.sql:/docker-entrypoint-initdb.d/setup.sql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  # Backend .NET 10 API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: absensi_backend
+    restart: always
+    ports:
+      - "5072:8080"
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Port=3306;Database=absensi;Uid=absensi_user;Pwd=absensipassword_dev;SslMode=Disabled;AllowPublicKeyRetrieval=True;
+      - JWT__Key=${JWT_KEY:-CHANGE_ME_IN_PRODUCTION_REPLACE_WITH_MIN_32_CHAR_SECRET}
+      - AllowedOrigins=http://localhost:5173,http://localhost:5174
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:

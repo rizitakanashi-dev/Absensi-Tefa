@@ -1,0 +1,27 @@
+using Absensi.Models;
+using Absensi.Services;
+
+namespace Absensi.Controller
+{
+    public static class StatusController
+    {
+        public static void MapStatus(this WebApplication app)
+        {
+            var g = app.MapGroup("/api/v1/status").RequireAuthorization();
+
+            g.MapGet("/", async (StatusService services) =>
+                {
+                    try
+                    {
+                        var data = await services.Get();
+                        return Results.Ok(data);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"STATUS GET: {e.Message}");
+                        return Results.Problem("Gagal mengambil data status");
+                    }
+                });
+        }
+    }
+}
