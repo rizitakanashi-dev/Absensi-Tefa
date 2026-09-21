@@ -43,5 +43,37 @@ namespace Absensi.Controller
             var data = await _anggotaService.GetAll();
             return Ok(data);
         }
+
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var data = await _anggotaService.GetById(id);
+            return data is null
+                ? NotFound(new { message = "Anggota tidak ditemukan" })
+                : Ok(data);
+        }
+
+        [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Update(int id, [FromBody] UserOTD data)
+        {
+            if (data == null || string.IsNullOrWhiteSpace(data.nama))
+                return BadRequest(new { message = "Nama tidak boleh kosong" });
+
+            var updated = await _anggotaService.Update(id, data);
+            return updated
+                ? Ok(new { message = "Anggota berhasil diperbarui" })
+                : NotFound(new { message = "Anggota tidak ditemukan" });
+        }
+
+        [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var deleted = await _anggotaService.Delete(id);
+            return deleted
+                ? Ok(new { message = "Anggota berhasil dihapus" })
+                : NotFound(new { message = "Anggota tidak ditemukan" });
+        }
     }
 }

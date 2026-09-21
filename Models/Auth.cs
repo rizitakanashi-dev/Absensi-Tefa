@@ -43,6 +43,7 @@ namespace Absensi.Models
     public const string ProjectManager = "PM";
     public const string Guru = "Guru";
     public const string Anggota = "Anggota";
+    public const string DevOps = "DevOps";
 
     public static void Register(AuthorizationOptions options)
     {
@@ -50,6 +51,7 @@ namespace Absensi.Models
       options.AddPolicy(ProjectManager, p => p.RequireRole("PM"));
       options.AddPolicy(Guru, p => p.RequireRole("Guru"));
       options.AddPolicy(Anggota, p => p.RequireRole("Anggota"));
+      options.AddPolicy(DevOps, p => p.RequireRole("DevOps"));
     }
   }
 }
