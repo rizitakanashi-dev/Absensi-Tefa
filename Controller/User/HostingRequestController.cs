@@ -20,15 +20,18 @@ namespace Absensi.Controller
 
                     IEnumerable<HostingRequestListDTO> result;
 
-                    // Anggota hanya bisa lihat request sendiri
-                    if (userRole == "Anggota")
+                    // Hanya Admin, PM, dan DevOps yang boleh melihat seluruh request.
+                    if (userRole is "Admin" or "PM" or "DevOps")
+                    {
+                        result = await service.GetAll(status);
+                    }
+                    else if (userRole == "Anggota")
                     {
                         result = await service.GetAll(status, userId);
                     }
-                    // PM & DevOps bisa lihat semua
                     else
                     {
-                        result = await service.GetAll(status);
+                        return Results.Forbid();
                     }
 
                     return Results.Ok(result);
@@ -54,7 +57,7 @@ namespace Absensi.Controller
                     Console.WriteLine($"HOSTING GET MY: {e.Message}");
                     return Results.Problem("Gagal mengambil data hosting request");
                 }
-            });
+            }).RequireAuthorization(policy => policy.RequireRole("Admin", "PM", "DevOps", "Anggota"));
 
             // 3. GET Pending Requests (untuk PM)
             g.MapGet("/pending", async (HostingRequestService service) =>
@@ -102,6 +105,9 @@ namespace Absensi.Controller
                     if (userRole == "Anggota" && request.IdUser != userId)
                         return Results.Forbid();
 
+                    if (userRole is not ("Admin" or "PM" or "DevOps" or "Anggota"))
+                        return Results.Forbid();
+
                     return Results.Ok(request);
                 }
                 catch (Exception e)
@@ -125,7 +131,7 @@ namespace Absensi.Controller
                     Console.WriteLine($"HOSTING POST: {e.Message}");
                     return Results.Problem("Gagal membuat hosting request");
                 }
-            });
+            }).RequireAuthorization(policy => policy.RequireRole("Anggota"));
 
             // 7. PUT Update Request (hanya jika pending atau rejected)
             g.MapPut("/request/{id:int}", async (int id, HostingRequestUpdateDTO data, HostingRequestService service, ClaimsPrincipal user) =>
@@ -158,7 +164,7 @@ namespace Absensi.Controller
                     Console.WriteLine($"HOSTING PUT: {e.Message}");
                     return Results.Problem("Gagal memperbarui hosting request");
                 }
-            });
+            }).RequireAuthorization(policy => policy.RequireRole("Admin", "Anggota"));
 
             // 8. PUT Approve Request (PM)
             g.MapPut("/request/{id:int}/approve", async (int id, HostingRequestReviewDTO data, HostingRequestService service, ClaimsPrincipal user) =>
@@ -204,7 +210,7 @@ namespace Absensi.Controller
                 try
                 {
                     var devopsId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                    var isStarted = await service.StartProcessing(id, devopsId);
+                    var isStarted = await service.StartProcessing(id, devopsId, user.IsInRole("Admin"));
                     
                     return isStarted
                         ? Results.Ok(new { message = "Hosting request mulai diproses" })
@@ -218,11 +224,13 @@ namespace Absensi.Controller
             }).RequireAuthorization(policy => policy.RequireRole("Admin", "DevOps"));
 
             // 11. PUT Complete Hosting (DevOps)
-            g.MapPut("/request/{id:int}/complete", async (int id, HostingRequestDevOpsUpdateDTO data, HostingRequestService service) =>
+            g.MapPut("/request/{id:int}/complete", async (int id, HostingRequestDevOpsUpdateDTO data, HostingRequestService service, ClaimsPrincipal user) =>
             {
                 try
                 {
-                    var isCompleted = await service.Complete(id, data);
+                    var devopsId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    var isAdmin = user.IsInRole("Admin");
+                    var isCompleted = await service.Complete(id, data, devopsId, isAdmin);
                     
                     return isCompleted
                         ? Results.Ok(new { message = "Hosting request selesai" })
@@ -236,11 +244,13 @@ namespace Absensi.Controller
             }).RequireAuthorization(policy => policy.RequireRole("Admin", "DevOps"));
 
             // 12. PUT Update DevOps Notes
-            g.MapPut("/request/{id:int}/notes", async (int id, HostingRequestReviewDTO data, HostingRequestService service) =>
+            g.MapPut("/request/{id:int}/notes", async (int id, HostingRequestReviewDTO data, HostingRequestService service, ClaimsPrincipal user) =>
             {
                 try
                 {
-                    var isUpdated = await service.UpdateDevOpsNotes(id, data.Notes);
+                    var devopsId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    var isAdmin = user.IsInRole("Admin");
+                    var isUpdated = await service.UpdateDevOpsNotes(id, data.Notes, devopsId, isAdmin);
                     
                     return isUpdated
                         ? Results.Ok(new { message = "DevOps notes berhasil diupdate" })
@@ -280,7 +290,7 @@ namespace Absensi.Controller
                     Console.WriteLine($"HOSTING CANCEL: {e.Message}");
                     return Results.Problem("Gagal cancel hosting request");
                 }
-            });
+            }).RequireAuthorization(policy => policy.RequireRole("Admin", "Anggota"));
 
             // 14. DELETE Hard Delete (Admin only)
             g.MapDelete("/request/{id:int}", async (int id, HostingRequestService service) =>

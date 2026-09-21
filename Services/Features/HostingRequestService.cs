@@ -259,7 +259,7 @@ namespace Absensi.Services
         }
 
         // START processing (DevOps)
-        public async Task<bool> StartProcessing(int id, int devopsId)
+        public async Task<bool> StartProcessing(int id, int devopsId, bool isAdmin = false)
         {
             using var conn = db.connect();
             await conn.OpenAsync();
@@ -270,14 +270,21 @@ namespace Absensi.Services
                 string sql = @"
                     UPDATE hosting_request SET
                         status = @Status,
-                        id_devops_handler = @DevOpsId
-                    WHERE id = @Id AND status = @StatusApproved";
+                        id_devops_handler = CASE WHEN @IsAdmin = 1 THEN id_devops_handler ELSE @DevOpsId END
+                    WHERE id = @Id
+                      AND status = @StatusApproved
+                      AND (@IsAdmin = 1 OR EXISTS (
+                          SELECT 1 FROM user
+                          WHERE user.id = @DevOpsId AND user.id_role = @RoleDevOps
+                      ));";
 
                 var result = await conn.ExecuteAsync(sql, new
                 {
                     Id = id,
                     Status = HostingStatus.InProgress,
                     DevOpsId = devopsId,
+                    IsAdmin = isAdmin ? 1 : 0,
+                    RoleDevOps = RoleIds.DevOps,
                     StatusApproved = HostingStatus.Approved
                 }, transaction);
 
@@ -292,7 +299,7 @@ namespace Absensi.Services
         }
 
         // COMPLETE hosting (DevOps)
-        public async Task<bool> Complete(int id, HostingRequestDevOpsUpdateDTO data)
+        public async Task<bool> Complete(int id, HostingRequestDevOpsUpdateDTO data, int devopsId, bool isAdmin = false)
         {
             using var conn = db.connect();
             await conn.OpenAsync();
@@ -305,7 +312,9 @@ namespace Absensi.Services
                         status = @Status,
                         devops_notes = @DevOpsNotes,
                         hosting_url = @HostingUrl
-                    WHERE id = @Id AND status = @StatusInProgress";
+                    WHERE id = @Id
+                      AND status = @StatusInProgress
+                      AND (@IsAdmin = 1 OR id_devops_handler = @DevOpsId);";
 
                 var result = await conn.ExecuteAsync(sql, new
                 {
@@ -313,6 +322,8 @@ namespace Absensi.Services
                     Status = HostingStatus.Completed,
                     data.DevOpsNotes,
                     data.HostingUrl,
+                    DevOpsId = devopsId,
+                    IsAdmin = isAdmin ? 1 : 0,
                     StatusInProgress = HostingStatus.InProgress
                 }, transaction);
 
@@ -327,7 +338,7 @@ namespace Absensi.Services
         }
 
         // UPDATE DevOps notes (DevOps)
-        public async Task<bool> UpdateDevOpsNotes(int id, string notes)
+        public async Task<bool> UpdateDevOpsNotes(int id, string notes, int devopsId, bool isAdmin = false)
         {
             using var conn = db.connect();
             await conn.OpenAsync();
@@ -338,9 +349,19 @@ namespace Absensi.Services
                 string sql = @"
                     UPDATE hosting_request SET
                         devops_notes = @Notes
-                    WHERE id = @Id";
+                    WHERE id = @Id
+                      AND status IN (@StatusInProgress, @StatusCompleted)
+                      AND (@IsAdmin = 1 OR id_devops_handler = @DevOpsId)";
 
-                var result = await conn.ExecuteAsync(sql, new { Id = id, Notes = notes }, transaction);
+                var result = await conn.ExecuteAsync(sql, new
+                {
+                    Id = id,
+                    Notes = notes,
+                    DevOpsId = devopsId,
+                    IsAdmin = isAdmin ? 1 : 0,
+                    StatusInProgress = HostingStatus.InProgress,
+                    StatusCompleted = HostingStatus.Completed
+                }, transaction);
 
                 await transaction.CommitAsync();
                 return result > 0;

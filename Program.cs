@@ -75,6 +75,7 @@ builder.Services.AddScoped<ProjectAnggotaService>();
 builder.Services.AddScoped<TargetService>();
 builder.Services.AddScoped<HostingRequestService>();
 builder.Services.AddScoped<DevOpsService>();
+builder.Services.AddScoped<AdminUserService>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -83,15 +84,20 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    var jwtIssuer = builder.Configuration["JWT:Issuer"] ?? throw new InvalidOperationException("JWT:Issuer belum dikonfigurasi.");
+    var jwtAudience = builder.Configuration["JWT:Audience"] ?? throw new InvalidOperationException("JWT:Audience belum dikonfigurasi.");
+    var jwtKey = builder.Configuration["JWT:Key"] ?? throw new InvalidOperationException("JWT:Key belum dikonfigurasi. Set via env 'JWT__Key' atau appsettings.");
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = false,
-        ValidateAudience = false,
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = jwtAudience,
         ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromMinutes(1),
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"] ?? throw new InvalidOperationException(
-                "JWT:Key belum dikonfigurasi. Set via env 'JWT__Key' atau appsettings.")))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
 

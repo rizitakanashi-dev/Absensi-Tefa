@@ -32,17 +32,18 @@ CREATE TABLE IF NOT EXISTS `project` (
 -- 5. Tabel user
 CREATE TABLE IF NOT EXISTS `user` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `nama` VARCHAR(255) DEFAULT NULL,
-  `password` VARCHAR(255) DEFAULT NULL,
-  `id_role` INT(11) DEFAULT NULL,
+  `nama` VARCHAR(255) NOT NULL,
+  `password` VARCHAR(255) NOT NULL,
+  `id_role` INT(11) NOT NULL,
   `id_divisi` INT(11) DEFAULT NULL,
   `refresh_token` VARCHAR(255) DEFAULT NULL,
   `refresh_token_expired` DATETIME DEFAULT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_user_nama` (`nama`),
   KEY `fk_user_role` (`id_role`),
   KEY `fk_user_divisi` (`id_divisi`),
   CONSTRAINT `fk_user_divisi` FOREIGN KEY (`id_divisi`) REFERENCES `divisi` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `fk_user_role` FOREIGN KEY (`id_role`) REFERENCES `role` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+  CONSTRAINT `fk_user_role` FOREIGN KEY (`id_role`) REFERENCES `role` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 6. Tabel project_anggota
@@ -118,6 +119,6 @@ CREATE TABLE IF NOT EXISTS `hosting_request` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Data Awal (Seed Data)
-INSERT INTO `role` (`id`, `nama`) VALUES (1, 'Admin'), (2, 'PM'), (3, 'Guru'), (4, 'Anggota'), (5, 'DevOps');
-INSERT INTO `divisi` (`id`, `nama`) VALUES (1, 'Backend'), (2, 'Frontend'), (3, 'Game');
-INSERT INTO `status` (`id`, `nama`) VALUES (1, 'Null'), (2, 'On Progress'), (3, 'Done'), (4, 'Izin'), (5, 'Sakit');
+INSERT IGNORE INTO `role` (`id`, `nama`) VALUES (1, 'Admin'), (2, 'PM'), (3, 'Guru'), (4, 'Anggota'), (5, 'DevOps');
+INSERT IGNORE INTO `divisi` (`id`, `nama`) VALUES (1, 'Backend'), (2, 'Frontend'), (3, 'Game');
+INSERT IGNORE INTO `status` (`id`, `nama`) VALUES (1, 'Null'), (2, 'On Progress'), (3, 'Done'), (4, 'Izin'), (5, 'Sakit');
