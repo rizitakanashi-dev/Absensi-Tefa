@@ -26,55 +26,37 @@ Dibangun dengan **ASP.NET Core 10 Minimal API + MVC**, database **MySQL 8.0**, d
 ```
 absensi/
 ├── Controller/
-│   ├── AuthController.cs           # Minimal API — auth endpoints
+│   ├── AuthController.cs              # Minimal API — auth
 │   ├── Admin/
-│   │   ├── DivisiController.cs     # Minimal API — master data divisi
-│   │   ├── RoleController.cs       # Minimal API — master data role
-│   │   └── StatusController.cs     # Minimal API — master data status
+│   │   ├── AdminUserController.cs     # MVC — CRUD semua user (Admin)
+│   │   ├── DivisiController.cs        # Minimal API — divisi
+│   │   ├── RoleController.cs          # Minimal API — role
+│   │   └── StatusController.cs        # Minimal API — status
 │   └── User/
-│       ├── AnggotaController.cs    # MVC Controller — manajemen anggota
-│       ├── PMController.cs         # MVC Controller — manajemen project manager
-│       ├── GuruController.cs       # Minimal API — manajemen guru
-│       ├── ProjectController.cs    # Minimal API — manajemen project
-│       ├── ProjectAnggotaController.cs  # MVC Controller — membership project
-│       └── AbsenController.cs      # Minimal API — absen masuk & pulang
-├── Models/
-│   ├── Auth.cs                     # Login, LoginResponse, UserSessionModel, Policies
-│   ├── User.cs                     # User, UserOTD, UserDTO
-│   ├── Absen.cs                    # AbsenRekapDTO, AbsenMasukDTO, AbsenPulangDTO
-│   ├── Project.cs                  # ProjectOTD, ProjectDTO
-│   ├── ProjectAnggota.cs           # ProjectAnggota, ProjectAnggotaOtd, ProjectAnggotaDto
-│   ├── Role.cs                     # RoleOTD, RoleDTO
-│   ├── Status.cs                   # StatusOTD, StatusDTO
-│   └── Divisi.cs                   # DivisiOTD, DivisiDTO
+│       ├── AnggotaController.cs       # MVC — CRUD Anggota (+ alias legacy)
+│       ├── PMController.cs            # MVC — CRUD PM (+ alias legacy)
+│       ├── DevOpsController.cs        # MVC — CRUD DevOps (+ alias legacy)
+│       ├── GuruController.cs          # Minimal API — CRUD Guru
+│       ├── ProjectController.cs       # Minimal API — project
+│       ├── ProjectAnggotaController.cs# MVC — membership project
+│       ├── TargetController.cs        # Minimal API — target
+│       ├── HostingRequestController.cs# Minimal API — hosting request
+│       └── AbsenController.cs         # Minimal API — absen
+├── Models/                            # DTO request/response + Constants (RoleIds, HostingStatus)
 ├── Services/
-│   ├── Auth/
-│   │   └── AuthServices.cs         # Register admin, login, refresh token, get me
-│   ├── Features/
-│   │   ├── AnggotaService.cs       # CRUD user role Anggota (id_role = 4)
-│   │   ├── PMService.cs            # CRUD user role PM (id_role = 2)
-│   │   ├── GuruService.cs          # CRUD user role Guru (id_role = 3)
-│   │   ├── AbsensiService.cs       # Rekap absensi, absen masuk, absen pulang
-│   │   ├── ProjectService.cs       # CRUD project
-│   │   └── ProjectAnggotaService.cs # Manajemen anggota project
-│   ├── MasterData/
-│   │   ├── DivisiService.cs        # CRUD divisi
-│   │   ├── StatusService.cs        # Read-only status
-│   │   └── RoleService.cs          # Read-only role
+│   ├── Auth/AuthServices.cs
+│   ├── Features/                      # Absensi, Target, Hosting, User role services, …
+│   ├── MasterData/                    # Divisi, Role, Status
 │   ├── Infrastructure/
-│   │   └── Database.cs             # Koneksi MySQL via MySqlConnection
-│   └── Interfaces/
-│       ├── IJWTService.cs          # Interface + implementasi JWTService
-│       ├── IPasswordService.cs     # Interface + implementasi PasswordService (BCrypt)
-│       └── IEnv.cs                 # Static class Env untuk akses konfigurasi global
-├── Middlewares/                    # (folder tersedia, siap untuk middleware custom)
-├── Properties/
-│   └── launchSettings.json         # Profile run lokal (port 5072)
-├── Program.cs                      # Entry point, DI container, pipeline middleware
-├── appsettings.json                # Konfigurasi connection string & JWT
-├── Dockerfile                      # Multi-stage build (SDK 10 → ASPNet 10 runtime)
-├── docker-compose.yml              # Orkestrasi backend + MySQL
-└── setup.sql                       # DDL schema + seed data awal
+│   │   ├── Database.cs                # MySqlConnection
+│   │   ├── DatabaseBootstrap.cs       # Seed role + pastikan tabel hosting_request
+│   │   └── ClaimsPrincipalExtensions.cs
+│   └── Interfaces/                    # JWT, Password, Env
+├── Middlewares/                       # GlobalExceptionHandler, DatabaseHealthCheck
+├── Absensi.Tests/                     # Unit/contract tests
+├── Program.cs
+├── setup.sql                          # DDL + seed (hanya jalan saat volume DB baru)
+└── docker-compose.yml
 ```
 
 ### Penjelasan Layer Arsitektur
@@ -143,6 +125,18 @@ erDiagram
         time jam_masuk
         time jam_pulang
     }
+    hosting_request {
+        int id PK
+        int id_user FK
+        int id_project FK
+        varchar contact_name
+        varchar contact_email
+        varchar contact_phone
+        enum status
+        int id_pm_reviewer FK
+        int id_devops_handler FK
+        datetime created_at
+    }
 
     role ||--o{ user : "memiliki"
     divisi ||--o{ user : "memiliki"
@@ -152,6 +146,8 @@ erDiagram
     project ||--o{ target : "digunakan di"
     status ||--o{ target : "menandai"
     target ||--o{ absensi : "dicatat di"
+    user ||--o{ hosting_request : "mengajukan"
+    project ||--o{ hosting_request : "untuk"
 ```
 
 ### Deskripsi Tabel
@@ -162,7 +158,9 @@ erDiagram
 | id    | INT (PK, AI) | Primary key        |
 | nama  | VARCHAR(255) | Nama role          |
 
-**Seed data:** `Admin (1)`, `PM (2)`, `Guru (3)`, `Anggota (4)`
+**Seed data:** `Admin (1)`, `PM (2)`, `Guru (3)`, `Anggota (4)`, `DevOps (5)`
+
+> Volume Docker yang sudah ada sebelum DevOps ditambahkan perlu seed ulang. Saat startup, `DatabaseBootstrap` menjalankan `INSERT IGNORE` role (termasuk DevOps) dan `CREATE TABLE IF NOT EXISTS hosting_request`.
 
 ---
 
@@ -235,6 +233,31 @@ erDiagram
 | id_target  | INT (FK)     | Referensi ke `target.id`, CASCADE DELETE                |
 | jam_masuk  | TIME         | Waktu absen masuk (diisi `CURRENT_TIME()`)              |
 | jam_pulang | TIME         | Waktu absen pulang, diisi saat `PUT /absen/pulang`      |
+
+---
+
+#### `hosting_request`
+| Kolom               | Tipe         | Keterangan                                              |
+| ------------------- | ------------ | ------------------------------------------------------- |
+| id                  | INT (PK, AI) | Primary key                                             |
+| id_user             | INT (FK)     | Pemohon (Anggota)                                       |
+| id_project          | INT (FK)     | Project yang di-host                                    |
+| contact_name        | VARCHAR(255) | Nama kontak                                             |
+| contact_email       | VARCHAR(255) | Email kontak                                            |
+| contact_phone       | VARCHAR(50)  | Telepon kontak                                          |
+| project_description | TEXT         | Deskripsi project                                       |
+| tech_stack          | TEXT         | Tech stack                                              |
+| repository_url      | VARCHAR(500) | URL repo                                                |
+| documentation_url   | VARCHAR(500) | URL dokumentasi                                         |
+| status              | ENUM         | `pending`, `approved`, `rejected`, `in_progress`, `completed`, `cancelled` |
+| id_pm_reviewer      | INT (FK)     | PM yang mereview                                        |
+| pm_notes            | TEXT         | Catatan PM                                              |
+| pm_reviewed_at      | DATETIME     | Waktu review PM                                         |
+| id_devops_handler   | INT (FK)     | DevOps yang menangani                                   |
+| devops_notes        | TEXT         | Catatan DevOps                                          |
+| hosting_url         | VARCHAR(500) | URL hasil hosting                                       |
+| created_at          | DATETIME     | Waktu dibuat                                            |
+| updated_at          | DATETIME     | Waktu diupdate                                          |
 
 ---
 
