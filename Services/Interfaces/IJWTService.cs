@@ -17,15 +17,11 @@ namespace Absensi.Services
         {
             var claims = new[]
             {
-              new Claim(JwtRegisteredClaimNames.Sub, user.id.ToString()),
-        // Maps to User.Id
-        
-        // Maps to User.Nama_Lengkap
-        new Claim(ClaimTypes.Name, user.Nama),
-        
-        // Maps to User.Id_Role
-        new Claim(ClaimTypes.Role, user.Role)
-    };
+                new Claim(JwtRegisteredClaimNames.Sub, user.id.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.id.ToString()),
+                new Claim(ClaimTypes.Name, user.Nama),
+                new Claim(ClaimTypes.Role, user.Role),
+            };
 
 
 

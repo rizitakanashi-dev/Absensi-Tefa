@@ -2,7 +2,6 @@ using Absensi.Models;
 using Absensi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Absensi.Controller
 {
@@ -70,7 +69,7 @@ namespace Absensi.Controller
             if (data is null || string.IsNullOrWhiteSpace(data.Nama))
                 return BadRequest(new { message = "Nama wajib diisi." });
 
-            if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var actorId))
+            if (!User.TryGetUserId(out var actorId))
                 return Unauthorized();
 
             try
@@ -93,7 +92,7 @@ namespace Absensi.Controller
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var actorId))
+            if (!User.TryGetUserId(out var actorId))
                 return Unauthorized();
 
             try

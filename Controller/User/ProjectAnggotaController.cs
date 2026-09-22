@@ -27,6 +27,7 @@ namespace Absensi.Controller
 
         // POST: api/v1/project-anggota
         [HttpPost]
+        [Authorize(Roles = "Admin,PM")]
         public async Task<IActionResult> Create([FromBody] ProjectAnggotaDto req)
         {
             if (req == null || req.User <= 0 || req.Project <= 0)
@@ -45,6 +46,7 @@ namespace Absensi.Controller
 
         // DELETE: api/v1/project-anggota/1
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,PM")]
         public async Task<IActionResult> Delete(int id)
         {
             var result = await _service.Delete(id);

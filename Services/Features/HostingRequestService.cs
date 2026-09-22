@@ -270,7 +270,7 @@ namespace Absensi.Services
                 string sql = @"
                     UPDATE hosting_request SET
                         status = @Status,
-                        id_devops_handler = CASE WHEN @IsAdmin = 1 THEN id_devops_handler ELSE @DevOpsId END
+                        id_devops_handler = @DevOpsId
                     WHERE id = @Id
                       AND status = @StatusApproved
                       AND (@IsAdmin = 1 OR EXISTS (

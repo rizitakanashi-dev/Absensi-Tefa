@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text;
 using System.Diagnostics;
-using System.Data;
 using System.Threading.RateLimiting;
 using Absensi.Services;
 using Absensi.Controller;
@@ -59,7 +59,15 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+});
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IJWTService, JWTService>();
 builder.Services.AddScoped<RoleServices>();
@@ -97,7 +105,9 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.FromMinutes(1),
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        NameClaimType = ClaimTypes.NameIdentifier,
+        RoleClaimType = ClaimTypes.Role
     };
 });
 
@@ -129,6 +139,10 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 Env.Value = app.Configuration;
+
+await DatabaseBootstrap.EnsureAsync(
+    app.Configuration,
+    app.Logger);
 
 app.UseGlobalExceptionHandler();
 

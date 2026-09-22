@@ -78,6 +78,7 @@ namespace Absensi.Middlewares
                 UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
                 ArgumentNullException => (int)HttpStatusCode.BadRequest,
                 FormatException => (int)HttpStatusCode.BadRequest,
+                MySqlException mysqlEx when mysqlEx.Number == 1062 => (int)HttpStatusCode.Conflict,
                 MySqlException => (int)HttpStatusCode.ServiceUnavailable,
                 _ => (int)HttpStatusCode.InternalServerError
             };

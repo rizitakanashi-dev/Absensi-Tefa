@@ -127,12 +127,8 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                    if (!int.TryParse(userIdClaim, out var userId))
-                    {
+                    if (!httpContext.User.TryGetUserId(out var userId))
                         return Results.Unauthorized();
-                    }
 
                     var user = await services.GetMe(userId);
                     if (user == null)
@@ -154,12 +150,8 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                    if (!int.TryParse(userIdClaim, out var userId))
-                    {
+                    if (!httpContext.User.TryGetUserId(out var userId))
                         return Results.Unauthorized();
-                    }
 
                     var result = await services.Logout(userId);
                     if (!result)

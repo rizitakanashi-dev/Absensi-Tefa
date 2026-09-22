@@ -70,39 +70,74 @@ namespace Absensi.Services
             using var conn = db.connect();
             await conn.OpenAsync();
 
-            string sqlInsertTarget = @"
-                INSERT INTO target(id_user, id_project, target, id_status)
-                VALUES(@IdUser, @IdProject, @Target, @IdStatus);";
-
-            await conn.ExecuteAsync(sqlInsertTarget, new
+            using var transaction = await conn.BeginTransactionAsync();
+            try
             {
-                IdUser = idUser,
-                req.IdProject,
-                req.Target,
-                req.IdStatus
-            });
+                string sqlInsertTarget = @"
+                    INSERT INTO target(id_user, id_project, target, id_status)
+                    VALUES(@IdUser, @IdProject, @Target, @IdStatus);";
 
-            // Ambil ID dari sesi koneksi yang aktif
-            int idTarget = await conn.ExecuteScalarAsync<int>("SELECT LAST_INSERT_ID();");
+                await conn.ExecuteAsync(sqlInsertTarget, new
+                {
+                    IdUser = idUser,
+                    req.IdProject,
+                    req.Target,
+                    req.IdStatus
+                }, transaction);
 
-            string sqlInsertAbsen = @"
-                INSERT INTO absensi(tanggal, id_target, jam_masuk)
-                VALUES(CURRENT_DATE(), @IdTarget, CURRENT_TIME());";
+                int idTarget = await conn.ExecuteScalarAsync<int>("SELECT LAST_INSERT_ID();", transaction: transaction);
 
-            int rows = await conn.ExecuteAsync(sqlInsertAbsen, new { IdTarget = idTarget });
-            return rows > 0;
+                string sqlInsertAbsen = @"
+                    INSERT INTO absensi(tanggal, id_target, jam_masuk)
+                    VALUES(CURRENT_DATE(), @IdTarget, CURRENT_TIME());";
+
+                int rows = await conn.ExecuteAsync(sqlInsertAbsen, new { IdTarget = idTarget }, transaction);
+                await transaction.CommitAsync();
+                return rows > 0;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
-        public async Task<bool> AbsenPulang(AbsenPulangDTO req)
+        public async Task<bool> AbsenPulang(int userId, AbsenPulangDTO req)
         {
             using var conn = db.connect();
-            string sqlStatus = "UPDATE target SET id_status = @IdStatus WHERE id = @IdTarget;";
-            await conn.ExecuteAsync(sqlStatus, new { req.IdStatus, req.IdTarget });
+            await conn.OpenAsync();
 
-            string sqlAbsensi = "UPDATE absensi SET jam_pulang = CURRENT_TIME() WHERE id = @IdAbsensi;";
-            int rows = await conn.ExecuteAsync(sqlAbsensi, new { req.IdAbsensi });
+            using var transaction = await conn.BeginTransactionAsync();
+            try
+            {
+                // Update status + jam pulang hanya jika absensi milik user yang login
+                // dan IdTarget cocok dengan baris absensi tersebut.
+                string sql = @"
+                    UPDATE absensi a
+                    INNER JOIN target t ON t.id = a.id_target
+                    SET a.jam_pulang = CURRENT_TIME(),
+                        t.id_status = @IdStatus
+                    WHERE a.id = @IdAbsensi
+                      AND a.id_target = @IdTarget
+                      AND t.id_user = @UserId
+                      AND a.jam_pulang IS NULL;";
 
-            return rows > 0;
+                int rows = await conn.ExecuteAsync(sql, new
+                {
+                    req.IdAbsensi,
+                    req.IdTarget,
+                    req.IdStatus,
+                    UserId = userId
+                }, transaction);
+
+                await transaction.CommitAsync();
+                return rows > 0;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
     }
 }

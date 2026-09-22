@@ -59,10 +59,9 @@ namespace Absensi.Controller
                 {
                     try
                     {
-                        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                        if (string.IsNullOrEmpty(userIdClaim))
-                            return Results.BadRequest(new { message = "token user tidak valid" });
-                        int idUser = int.Parse(userIdClaim);
+                        if (!user.TryGetUserId(out var idUser))
+                            return Results.Unauthorized();
+
                         bool success = await service.AbsenMasuk(idUser, req);
 
                         if (!success)
@@ -77,14 +76,17 @@ namespace Absensi.Controller
                     }
                 });
 
-            g.MapPut("/pulang", async (AbsenPulangDTO req, AbsensiService service) =>
+            g.MapPut("/pulang", async (AbsenPulangDTO req, ClaimsPrincipal user, AbsensiService service) =>
               {
                   try
                   {
-                      bool success = await service.AbsenPulang(req);
+                      if (!user.TryGetUserId(out var idUser))
+                          return Results.Unauthorized();
+
+                      bool success = await service.AbsenPulang(idUser, req);
 
                       if (!success)
-                          return Results.BadRequest(new { message = "gagal melakukan absen pulang, data absensi tidak ditemukan" });
+                          return Results.BadRequest(new { message = "gagal melakukan absen pulang, data tidak ditemukan atau bukan milik anda" });
 
                       return Results.Ok(new { message = "Absen pulang berhasil" });
                   }

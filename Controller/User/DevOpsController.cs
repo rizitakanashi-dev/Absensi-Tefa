@@ -6,7 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Absensi.Controller
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/devops")]
+    [Route("api/DevOps")]
     [Authorize(Roles = "Admin")]
     public class DevOpsController : ControllerBase
     {

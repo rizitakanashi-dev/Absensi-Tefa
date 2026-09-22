@@ -15,8 +15,10 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
-                    var userId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    if (!user.TryGetUserId(out var userId))
+                        return Results.Unauthorized();
+
+                    var userRole = user.GetRoleName();
 
                     IEnumerable<HostingRequestListDTO> result;
 
@@ -48,7 +50,9 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    var userId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    if (!user.TryGetUserId(out var userId))
+                        return Results.Unauthorized();
+
                     var result = await service.GetAll(null, userId);
                     return Results.Ok(result);
                 }
@@ -98,9 +102,10 @@ namespace Absensi.Controller
                     if (request == null)
                         return Results.NotFound(new { message = "Hosting request tidak ditemukan" });
 
-                    // Authorization check: Anggota hanya bisa lihat request sendiri
-                    var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
-                    var userId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    if (!user.TryGetUserId(out var userId))
+                        return Results.Unauthorized();
+
+                    var userRole = user.GetRoleName();
 
                     if (userRole == "Anggota" && request.IdUser != userId)
                         return Results.Forbid();
@@ -122,7 +127,9 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    var userId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    if (!user.TryGetUserId(out var userId))
+                        return Results.Unauthorized();
+
                     var newId = await service.Create(userId, data);
                     return Results.Created($"/api/v1/hosting/request/{newId}", new { id = newId, message = "Hosting request berhasil dibuat" });
                 }
@@ -138,19 +145,18 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    // Check ownership
                     var existing = await service.GetById(id);
                     if (existing == null)
                         return Results.NotFound(new { message = "Hosting request tidak ditemukan" });
 
-                    var userId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                    var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
+                    if (!user.TryGetUserId(out var userId))
+                        return Results.Unauthorized();
 
-                    // Hanya owner atau admin yang bisa update
+                    var userRole = user.GetRoleName();
+
                     if (userRole != "Admin" && existing.IdUser != userId)
                         return Results.Forbid();
 
-                    // Cek status (hanya pending/rejected yang bisa diupdate)
                     if (existing.Status != HostingStatus.Pending && existing.Status != HostingStatus.Rejected)
                         return Results.BadRequest(new { message = "Request tidak bisa diupdate karena sudah diproses" });
 
@@ -171,9 +177,11 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    var pmId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    if (!user.TryGetUserId(out var pmId))
+                        return Results.Unauthorized();
+
                     var isApproved = await service.Approve(id, pmId, data.Notes);
-                    
+
                     return isApproved
                         ? Results.Ok(new { message = "Hosting request berhasil di-approve" })
                         : Results.BadRequest(new { message = "Gagal approve request. Pastikan status masih pending." });
@@ -190,9 +198,11 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    var pmId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    if (!user.TryGetUserId(out var pmId))
+                        return Results.Unauthorized();
+
                     var isRejected = await service.Reject(id, pmId, data.Notes);
-                    
+
                     return isRejected
                         ? Results.Ok(new { message = "Hosting request berhasil di-reject" })
                         : Results.BadRequest(new { message = "Gagal reject request. Pastikan status masih pending." });
@@ -209,9 +219,11 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    var devopsId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    if (!user.TryGetUserId(out var devopsId))
+                        return Results.Unauthorized();
+
                     var isStarted = await service.StartProcessing(id, devopsId, user.IsInRole("Admin"));
-                    
+
                     return isStarted
                         ? Results.Ok(new { message = "Hosting request mulai diproses" })
                         : Results.BadRequest(new { message = "Gagal start processing. Pastikan status approved." });
@@ -228,10 +240,12 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    var devopsId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    if (!user.TryGetUserId(out var devopsId))
+                        return Results.Unauthorized();
+
                     var isAdmin = user.IsInRole("Admin");
                     var isCompleted = await service.Complete(id, data, devopsId, isAdmin);
-                    
+
                     return isCompleted
                         ? Results.Ok(new { message = "Hosting request selesai" })
                         : Results.BadRequest(new { message = "Gagal complete. Pastikan status in_progress." });
@@ -248,10 +262,12 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    var devopsId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    if (!user.TryGetUserId(out var devopsId))
+                        return Results.Unauthorized();
+
                     var isAdmin = user.IsInRole("Admin");
                     var isUpdated = await service.UpdateDevOpsNotes(id, data.Notes, devopsId, isAdmin);
-                    
+
                     return isUpdated
                         ? Results.Ok(new { message = "DevOps notes berhasil diupdate" })
                         : Results.BadRequest(new { message = "Gagal update notes" });
@@ -268,15 +284,15 @@ namespace Absensi.Controller
             {
                 try
                 {
-                    // Check ownership
                     var existing = await service.GetById(id);
                     if (existing == null)
                         return Results.NotFound(new { message = "Hosting request tidak ditemukan" });
 
-                    var userId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                    var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
+                    if (!user.TryGetUserId(out var userId))
+                        return Results.Unauthorized();
 
-                    // Hanya owner atau admin yang bisa cancel
+                    var userRole = user.GetRoleName();
+
                     if (userRole != "Admin" && existing.IdUser != userId)
                         return Results.Forbid();
 

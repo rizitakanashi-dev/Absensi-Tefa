@@ -11,19 +11,36 @@ namespace Absensi.Controller
             var g = app.MapGroup("/api/v1/target").RequireAuthorization();
 
             // 1. GET All Targets (Admin/PM/Guru bisa filter by user, user biasa hanya bisa lihat milik sendiri)
-            g.MapGet("/", async (int? userId, int? projectId, int? statusId, 
+            // Catatan: daftarkan /my SEBELUM /{id} agar tidak bentrok di beberapa host.
+            g.MapGet("/my", async (TargetService service, ClaimsPrincipal user) =>
+            {
+                try
+                {
+                    if (!user.TryGetUserId(out var userId))
+                        return Results.Unauthorized();
+
+                    var result = await service.GetByUserId(userId);
+                    return Results.Ok(result);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"TARGET GET MY: {e.Message}");
+                    return Results.Problem("Gagal mengambil data target");
+                }
+            });
+
+            g.MapGet("/", async (int? userId, int? projectId, int? statusId,
                 TargetService service, ClaimsPrincipal user) =>
             {
                 try
                 {
-                    var currentUserId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                    var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
+                    if (!user.TryGetUserId(out var currentUserId))
+                        return Results.Unauthorized();
 
-                    // Jika user biasa (Anggota), hanya bisa lihat target sendiri
+                    var userRole = user.GetRoleName();
+
                     if (userRole == "Anggota")
-                    {
                         userId = currentUserId;
-                    }
 
                     var result = await service.GetAll(userId, projectId, statusId);
                     return Results.Ok(result);
@@ -35,7 +52,6 @@ namespace Absensi.Controller
                 }
             });
 
-            // 2. GET Target by ID
             g.MapGet("/{id:int}", async (int id, TargetService service, ClaimsPrincipal user) =>
             {
                 try
@@ -44,9 +60,10 @@ namespace Absensi.Controller
                     if (target == null)
                         return Results.NotFound(new { message = "Target tidak ditemukan" });
 
-                    // Check authorization: user hanya bisa lihat target sendiri
-                    var currentUserId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                    var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
+                    if (!user.TryGetUserId(out var currentUserId))
+                        return Results.Unauthorized();
+
+                    var userRole = user.GetRoleName();
 
                     if (userRole == "Anggota" && target.IdUser != currentUserId)
                         return Results.Forbid();
@@ -60,23 +77,6 @@ namespace Absensi.Controller
                 }
             });
 
-            // 3. GET My Targets (untuk user melihat target mereka sendiri)
-            g.MapGet("/my", async (TargetService service, ClaimsPrincipal user) =>
-            {
-                try
-                {
-                    var userId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                    var result = await service.GetByUserId(userId);
-                    return Results.Ok(result);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"TARGET GET MY: {e.Message}");
-                    return Results.Problem("Gagal mengambil data target");
-                }
-            });
-
-            // 4. POST Create Target (Admin/PM/Guru)
             g.MapPost("/", async (TargetCreateDTO data, TargetService service) =>
             {
                 try
@@ -91,28 +91,27 @@ namespace Absensi.Controller
                 }
             }).RequireAuthorization(policy => policy.RequireRole("Admin", "PM", "Guru"));
 
-            // 5. PUT Update Target
-            g.MapPut("/{id:int}", async (int id, TargetUpdateDTO data, 
+            g.MapPut("/{id:int}", async (int id, TargetUpdateDTO data,
                 TargetService service, ClaimsPrincipal user) =>
             {
                 try
                 {
-                    // Check jika target exists
                     var existing = await service.GetById(id);
                     if (existing == null)
                         return Results.NotFound(new { message = "Target tidak ditemukan" });
 
-                    // Authorization: user hanya bisa update target sendiri (kecuali Admin/PM/Guru)
-                    var currentUserId = int.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                    var userRole = user.FindFirst(ClaimTypes.Role)?.Value;
+                    if (!user.TryGetUserId(out var currentUserId))
+                        return Results.Unauthorized();
+
+                    var userRole = user.GetRoleName();
 
                     if (userRole == "Anggota" && existing.IdUser != currentUserId)
                         return Results.Forbid();
 
                     data.Id = id;
                     var isUpdated = await service.Update(data);
-                    
-                    return isUpdated 
+
+                    return isUpdated
                         ? Results.Ok(new { message = "Target berhasil diperbarui" })
                         : Results.BadRequest(new { message = "Tidak ada data yang diperbarui" });
                 }
@@ -123,7 +122,6 @@ namespace Absensi.Controller
                 }
             });
 
-            // 6. DELETE Target (Hanya Admin)
             g.MapDelete("/{id:int}", async (int id, TargetService service) =>
             {
                 try
