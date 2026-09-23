@@ -80,30 +80,46 @@ namespace Absensi.Services
             if (actorId == id && data.IdRole != RoleIds.Admin)
                 throw new InvalidOperationException("Admin tidak dapat menurunkan role dirinya sendiri.");
 
+            // Baca state lama agar bisa memutuskan apakah access user ini
+            // perlu dicabut (role berubah -> aktif/refresh perlu di-reset).
+            var current = await conn.QueryFirstOrDefaultAsync<(int? RoleId, string? RefreshToken)>(@"
+                SELECT id_role AS RoleId, refresh_token AS RefreshToken
+                FROM user WHERE id = @Id;", new { Id = id });
+            if (current.RoleId is null)
+                return false;
+
             var parameters = new DynamicParameters();
             parameters.Add("Id", id);
             parameters.Add("Nama", data.Nama.Trim());
             parameters.Add("IdRole", data.IdRole);
             parameters.Add("IdDivisi", NormalizeDivision(data.IdDivisi));
 
-            var passwordClause = string.Empty;
+            var setClauses = new List<string>
+            {
+                "nama = @Nama",
+                "id_role = @IdRole",
+                "id_divisi = @IdDivisi"
+            };
+
+            // Password diubah -> cabut refresh token (paksa login ulang).
             if (!string.IsNullOrWhiteSpace(data.Password))
             {
                 ValidatePassword(data.Password);
-                passwordClause = ", password = @Password";
+                setClauses.Add("password = @Password");
                 parameters.Add("Password", passwordService.HashPassword(data.Password));
             }
 
-            const string sql = @"
-                UPDATE user
-                SET nama = @Nama,
-                    id_role = @IdRole,
-                    id_divisi = @IdDivisi,
-                    refresh_token = NULL,
-                    refresh_token_expired = NULL" + "{PASSWORD_CLAUSE}" + @"
-                WHERE id = @Id;";
+            // Role berubah -> sebarkan ke user yang lain (refresh token pun hangus),
+            // TAPI role diri sendiri tidak boleh di-reset oleh penurun role tsb.
+            if (data.IdRole != current.RoleId && actorId != id)
+            {
+                setClauses.Add("refresh_token = NULL");
+                setClauses.Add("refresh_token_expired = NULL");
+            }
 
-            return await conn.ExecuteAsync(sql.Replace("{PASSWORD_CLAUSE}", passwordClause), parameters) > 0;
+            string sql = $"UPDATE user SET {string.Join(", ", setClauses)} WHERE id = @Id;";
+
+            return await conn.ExecuteAsync(sql, parameters) > 0;
         }
 
         public async Task<bool> Delete(int actorId, int id)
@@ -129,6 +145,13 @@ namespace Absensi.Services
                     if (adminCount <= 1)
                         throw new InvalidOperationException("Admin terakhir tidak dapat dihapus.");
                 }
+
+                // CASCADE dari FK akan menghapus target/absensi/anggota,
+                // tapi hosting_request yang id_user=@Id juga harus ikut terhapus
+                // karena FK-nya ON DELETE CASCADE, dan JWT dari user yang logout
+                // setelah dihapus tidak boleh bisa refresh lagi.
+                const string cleanupHostingSql = "DELETE FROM hosting_request WHERE id_user = @Id;";
+                await conn.ExecuteAsync(cleanupHostingSql, new { Id = id }, transaction);
 
                 const string deleteSql = "DELETE FROM user WHERE id = @Id;";
                 var affected = await conn.ExecuteAsync(deleteSql, new { Id = id }, transaction);

@@ -139,6 +139,9 @@ namespace Absensi.Services
         }
 
         // UPDATE hosting request (hanya jika status pending atau rejected)
+        // Jika request sebelumnya rejected, reset kembali ke pending agar
+        // PM bisa meninjau ulang setelah perbaikan (sebelumnya dead-end:
+        // update tidak mengubah status, approve hanya menerima pending).
         public async Task<bool> Update(int id, HostingRequestUpdateDTO data)
         {
             using var conn = db.connect();
@@ -147,17 +150,51 @@ namespace Absensi.Services
             using var transaction = await conn.BeginTransactionAsync();
             try
             {
-                string sql = @"
-                    UPDATE hosting_request SET
-                        id_project = @IdProject,
-                        contact_name = @ContactName,
-                        contact_email = @ContactEmail,
-                        contact_phone = @ContactPhone,
-                        project_description = @ProjectDescription,
-                        tech_stack = @TechStack,
-                        repository_url = @RepositoryUrl,
-                        documentation_url = @DocumentationUrl
-                    WHERE id = @Id AND status IN (@StatusPending, @StatusRejected)";
+                // Status saat ini (dalam transaksi) untuk memutuskan perlu reset.
+                var status = await conn.ExecuteScalarAsync<string?>(
+                    "SELECT status FROM hosting_request WHERE id = @Id FOR UPDATE;",
+                    new { Id = id }, transaction);
+
+                if (status is null)
+                    return false;
+
+                if (status is not (HostingStatus.Pending or HostingStatus.Rejected))
+                    return false;
+
+                string sql;
+                if (status == HostingStatus.Rejected)
+                {
+                    // Reset ke pending + bersihkan jejak review PM yang lalu.
+                    sql = @"
+                        UPDATE hosting_request SET
+                            id_project = @IdProject,
+                            contact_name = @ContactName,
+                            contact_email = @ContactEmail,
+                            contact_phone = @ContactPhone,
+                            project_description = @ProjectDescription,
+                            tech_stack = @TechStack,
+                            repository_url = @RepositoryUrl,
+                            documentation_url = @DocumentationUrl,
+                            status = @StatusPending,
+                            id_pm_reviewer = NULL,
+                            pm_notes = NULL,
+                            pm_reviewed_at = NULL
+                        WHERE id = @Id AND status = @StatusRejected";
+                }
+                else
+                {
+                    sql = @"
+                        UPDATE hosting_request SET
+                            id_project = @IdProject,
+                            contact_name = @ContactName,
+                            contact_email = @ContactEmail,
+                            contact_phone = @ContactPhone,
+                            project_description = @ProjectDescription,
+                            tech_stack = @TechStack,
+                            repository_url = @RepositoryUrl,
+                            documentation_url = @DocumentationUrl
+                        WHERE id = @Id AND status = @StatusPending";
+                }
 
                 var result = await conn.ExecuteAsync(sql, new
                 {

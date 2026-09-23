@@ -67,12 +67,36 @@ namespace Absensi.Services
 
         public async Task<bool> AbsenMasuk(int idUser, AbsenMasukDTO req)
         {
+            if (req.IdProject <= 0)
+                return false;
+
             using var conn = db.connect();
             await conn.OpenAsync();
 
             using var transaction = await conn.BeginTransactionAsync();
             try
             {
+                // Absen masuk hanya untuk project yang user-nya terdaftar sebagai anggota.
+                const string memberSql = @"
+                    SELECT COUNT(*)
+                    FROM project_anggota
+                    WHERE id_user = @IdUser AND id_project = @IdProject;";
+                var isMember = await conn.ExecuteScalarAsync<int>(memberSql, new { IdUser = idUser, IdProject = req.IdProject }, transaction) > 0;
+                if (!isMember)
+                    return false;
+
+                // Cegah absen ganda: tolak jika hari ini sudah ada absen yang belum pulang.
+                const string activeSql = @"
+                    SELECT COUNT(*)
+                    FROM absensi a
+                    INNER JOIN target t ON t.id = a.id_target
+                    WHERE t.id_user = @IdUser
+                      AND a.tanggal = CURRENT_DATE()
+                      AND a.jam_pulang IS NULL;";
+                var hasActive = await conn.ExecuteScalarAsync<int>(activeSql, new { IdUser = idUser }, transaction) > 0;
+                if (hasActive)
+                    return false;
+
                 string sqlInsertTarget = @"
                     INSERT INTO target(id_user, id_project, target, id_status)
                     VALUES(@IdUser, @IdProject, @Target, @IdStatus);";

@@ -65,7 +65,7 @@ namespace Absensi.Controller
                         bool success = await service.AbsenMasuk(idUser, req);
 
                         if (!success)
-                            return Results.BadRequest(new { message = "gagal melakukan absen masuk, periksa kembali id project" });
+                            return Results.BadRequest(new { message = "Absen masuk gagal. Anda bukan anggota project tersebut, sudah absen hari ini, atau project tidak valid." });
 
                         return Results.Ok(new { message = "absen masuk berhasil" });
                     }

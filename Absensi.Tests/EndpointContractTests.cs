@@ -64,4 +64,32 @@ public class EndpointContractTests
         Assert.Equal("userId", parameters[0].Name);
         Assert.Equal(typeof(Absensi.Models.AbsenPulangDTO), parameters[1].ParameterType);
     }
+
+    [Fact]
+    public void AbsenMasuk_RequiresActingUserId()
+    {
+        var method = typeof(AbsensiService).GetMethod(nameof(AbsensiService.AbsenMasuk));
+        Assert.NotNull(method);
+
+        var parameters = method!.GetParameters();
+        Assert.Equal(2, parameters.Length);
+        Assert.Equal(typeof(int), parameters[0].ParameterType);
+        Assert.Equal("idUser", parameters[0].Name);
+        Assert.Equal(typeof(Absensi.Models.AbsenMasukDTO), parameters[1].ParameterType);
+    }
+
+    [Fact]
+    public void ActiveUserService_ExposesStateValidation()
+    {
+        var method = typeof(ActiveUserService).GetMethod(nameof(ActiveUserService.IsStillActiveAsync));
+        Assert.NotNull(method);
+
+        var parameters = method!.GetParameters();
+        Assert.Equal(3, parameters.Length);
+        Assert.Equal(typeof(int), parameters[0].ParameterType);
+        Assert.Equal("userId", parameters[0].Name);
+        Assert.Equal(typeof(string), parameters[1].ParameterType);
+        Assert.Equal("tokenRole", parameters[1].Name);
+        Assert.Equal(typeof(System.Threading.CancellationToken), parameters[2].ParameterType);
+    }
 }
