@@ -85,7 +85,6 @@ builder.Services.AddScoped<HostingRequestService>();
 builder.Services.AddScoped<DevOpsService>();
 builder.Services.AddScoped<AdminUserService>();
 builder.Services.AddScoped<ActiveUserService>();
-builder.Services.AddScoped<RoleUserService>();
 
 builder.Services.AddAuthentication(options =>
 {
